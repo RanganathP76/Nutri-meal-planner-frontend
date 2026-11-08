@@ -1,16 +1,13 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
+import './index.css';
 import App from './App';
-import AdminDashboard from './AdminDashboard';
+import { captureReferral } from './utils/referral';
 
-const root = ReactDOM.createRoot(document.getElementById('root'));
+captureReferral();
 
-// Access Admin Dashboard by opening: http://localhost:3000?view=admin
-const urlParams = new URLSearchParams(window.location.search);
-const isAdminView = urlParams.get('view') === 'admin';
-
-root.render(
+ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>
-    {isAdminView ? <AdminDashboard /> : <App />}
+    <App />
   </React.StrictMode>
 );

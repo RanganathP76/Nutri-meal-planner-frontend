@@ -1,0 +1,8 @@
+.plan { display: grid; gap: 8px; }
+.plan.current { border: 2px solid var(--success); }
+.plan-head { display: flex; justify-content: space-between; gap: 10px; align-items: flex-start; }
+.plan-head strong { color: var(--primary); font-size: 18px; white-space: nowrap; }
+.plan ul { margin: 0; padding-left: 18px; font-size: 13px; color: #4b5563; display: grid; gap: 2px; }
+
+.pay-row { display: grid; gap: 4px; font-size: 13px; }
+.pay-top { display: flex; justify-content: space-between; gap: 8px; align-items: center; }

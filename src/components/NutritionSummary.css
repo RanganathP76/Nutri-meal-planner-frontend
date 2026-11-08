@@ -1,0 +1,12 @@
+.nutri { background: #1e293b; color: #fff; padding: 14px; border-radius: 10px; }
+.nutri-row { display: flex; justify-content: space-between; font-size: 13px; margin-bottom: 8px; gap: 8px; }
+.nutri-bar { height: 8px; background: #334155; border-radius: 4px; overflow: hidden; }
+.nutri-bar div { height: 100%; background: #22c55e; transition: width 0.3s; }
+.nutri details { margin-top: 10px; font-size: 12px; }
+.nutri summary { cursor: pointer; color: #94a3b8; }
+.nutri-more { display: flex; gap: 14px; margin-top: 8px; }
+
+.nutri-left { margin-top: 8px; font-size: 12px; color: #cbd5e1; }
+.nutri-table { width: 100%; margin-top: 8px; border-collapse: collapse; font-size: 12px; }
+.nutri-table th { text-align: left; color: #94a3b8; font-weight: 600; padding: 2px 4px; }
+.nutri-table td { padding: 3px 4px; border-top: 1px solid #334155; }

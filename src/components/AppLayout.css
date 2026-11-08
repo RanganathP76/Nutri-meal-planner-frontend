@@ -1,0 +1,7 @@
+.shell { max-width: 480px; margin: 0 auto; min-height: 100vh; background: var(--bg); }
+.shell-header { position: sticky; top: 0; z-index: 5; background: #fff; padding: 14px 16px; font-weight: 700; font-size: 18px; border-bottom: 1px solid var(--border); }
+.shell-main { padding: 16px 16px 90px; }
+.bottom-nav { position: fixed; bottom: 0; left: 50%; transform: translateX(-50%); width: 100%; max-width: 480px; height: 64px; background: #fff; border-top: 1px solid var(--border); display: flex; z-index: 10; }
+.bottom-nav a { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; font-size: 11px; color: var(--muted); text-decoration: none; }
+.bottom-nav a.active { color: var(--primary); font-weight: 700; }
+.nav-icon { font-size: 20px; }

@@ -1,0 +1,12 @@
+.day { display: grid; gap: 8px; }
+.day.today { border: 2px solid var(--primary); }
+.day.faded { opacity: 0.6; }
+.day-head { display: flex; align-items: center; gap: 8px; }
+.plan-link { margin-left: auto; color: var(--primary); font-weight: 700; font-size: 13px; text-decoration: none; }
+.day-meals { display: grid; gap: 4px; font-size: 13px; }
+
+.day-details { font-size: 12px; color: var(--muted); }
+.day-details summary { cursor: pointer; }
+.detail-row { display: flex; justify-content: space-between; gap: 10px; padding: 4px 0; border-top: 1px solid var(--border); }
+.detail-row:first-of-type { margin-top: 6px; }
+.detail-row.total { font-weight: 700; color: var(--text); }

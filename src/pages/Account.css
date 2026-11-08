@@ -1,0 +1,2 @@
+.acc-row { display: flex; justify-content: space-between; gap: 12px; font-size: 14px; }
+.acc-row strong { text-align: right; word-break: break-word; }

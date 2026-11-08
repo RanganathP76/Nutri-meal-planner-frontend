@@ -1,0 +1,9 @@
+.te-head { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+.te-all { width: auto; padding: 8px 10px; font-size: 12px; }
+.te-table { display: grid; gap: 12px; }
+.te-row { display: grid; gap: 4px; padding-bottom: 10px; border-bottom: 1px solid var(--border); }
+.te-top { display: flex; justify-content: space-between; align-items: center; }
+.te-edit { display: flex; align-items: center; gap: 8px; }
+.te-edit input { width: 110px; padding: 8px; }
+.te-btn { width: auto; padding: 8px 12px; font-size: 12px; }
+.te-meta { display: flex; flex-wrap: wrap; gap: 4px 14px; font-size: 12px; }

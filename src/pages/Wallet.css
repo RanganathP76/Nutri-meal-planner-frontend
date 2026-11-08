@@ -1,0 +1,15 @@
+.balance { background: var(--primary); color: #fff; padding: 20px; border-radius: 12px; text-align: center; display: grid; gap: 8px; }
+.balance h1 { margin: 0; font-size: 34px; }
+.balance .code { font-size: 13px; background: rgba(255, 255, 255, 0.2); padding: 6px 12px; border-radius: 8px; justify-self: center; }
+.tx { display: grid; gap: 4px; font-size: 13px; }
+.tx-row { display: flex; justify-content: space-between; }
+.plus { color: var(--success); }
+.minus { color: var(--danger); }
+
+.seg { display: flex; gap: 6px; }
+.seg button { flex: 1; padding: 10px; border: 1px solid #d1d5db; border-radius: 8px; background: #fff; font-weight: 600; cursor: pointer; }
+.seg button.on { background: var(--primary); color: #fff; border-color: var(--primary); }
+.quote { width: 100%; border-collapse: collapse; font-size: 13px; }
+.quote td { padding: 6px 0; border-bottom: 1px solid var(--border); }
+.quote td:last-child { text-align: right; }
+.quote .net td { font-weight: 700; border-bottom: 0; font-size: 15px; }
