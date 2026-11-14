@@ -13,3 +13,15 @@
 .meal-more { font-size: 12px; color: var(--muted); }
 .meal-more summary { cursor: pointer; }
 .meal-more p { margin: 6px 0 0; }
+.why-list { margin: 6px 0 0; padding-left: 18px; display: grid; gap: 4px; font-size: 0.9rem; }
+.why-good { color: #15803d; }
+.why-warn { color: #92400e; }
+.why-info { color: inherit; }
+.meal-more.why summary { color: var(--primary); cursor: pointer; font-size: 0.9rem; }
+.nut-group { margin-top: 8px; }
+.nut-table { width: 100%; font-size: 0.85rem; border-collapse: collapse; }
+.nut-table td { padding: 2px 0; border-bottom: 1px solid var(--border); }
+.nut-table td:last-child { text-align: right; }
+.nut-table .na { color: #9ca3af; }
+.micro-targets summary { cursor: pointer; }
+.nut-table th { font-size: 0.8rem; font-weight: 600; text-align: right; padding-bottom: 2px; }

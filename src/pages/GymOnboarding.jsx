@@ -1,26 +1,25 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import api, { errorMessage } from '../api/client';
+import { GoalAndTarget, BodySummary } from '../components/BodyGoal';
+import TargetsEditor from '../components/TargetsEditor';
+import MicroTargets from '../components/MicroTargets';
+import { DISEASES } from '../utils/health';
 import './GymOnboarding.css';
 
-const ALLERGIES = ['dairy', 'gluten', 'nuts', 'egg', 'fish', 'soy', 'sesame', 'shellfish'];
-const CONDITIONS = [['diabetes', 'Diabetes'], ['hypertension_bp', 'Blood pressure'], ['thyroid', 'Thyroid'], ['high_cholesterol', 'High cholesterol']];
 const BLANK = {
-  gender: '', age: '', heightCm: '', weightKg: '', bodyFatPercent: '', activityLevel: 'moderate', goal: 'maintain',
+  gender: '', age: '', heightCm: '', weightKg: '', targetWeightKg: '', bodyFatPercent: '', activityLevel: 'moderate', goal: 'maintain',
   workoutSchedule: 'morning', morningTime: '06:30', eveningTime: '18:00', intensity: 'moderate', dietType: 'vegetarian',
-  healthConditions: [], allergies: [], otherAllergies: '', avoidFoods: '', acceptedNotice: false
+  healthConditions: [], acceptedNotice: false
 };
-const split = (t) => t.split(',').map((x) => x.trim()).filter(Boolean);
 const s = (v) => (v == null ? '' : String(v));
 
 const fromProfile = (p) => ({
-  ...BLANK, gender: p.gender, age: s(p.age), heightCm: s(p.heightCm), weightKg: s(p.weightKg), bodyFatPercent: s(p.bodyFatPercent),
+  ...BLANK, gender: p.gender, age: s(p.age), heightCm: s(p.heightCm), weightKg: s(p.weightKg), targetWeightKg: s(p.targetWeightKg), bodyFatPercent: s(p.bodyFatPercent),
   activityLevel: p.activityLevel, goal: p.goal, workoutSchedule: p.workoutSchedule,
   morningTime: p.morningTime || BLANK.morningTime, eveningTime: p.eveningTime || BLANK.eveningTime,
   intensity: p.intensity, dietType: p.dietType, healthConditions: p.healthConditions || [],
-  allergies: (p.allergies || []).filter((a) => ALLERGIES.includes(a)),
-  otherAllergies: (p.allergies || []).filter((a) => !ALLERGIES.includes(a)).join(', '),
-  avoidFoods: (p.avoidFoods || []).join(', '), acceptedNotice: false
+  acceptedNotice: false
 });
 
 function Toggles({ options, value, onChange }) {
@@ -41,6 +40,7 @@ export default function GymOnboarding() {
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
   const set = (patch) => setF((o) => ({ ...o, ...patch }));
+  const aboutDone = Boolean(f.gender && f.age && f.heightCm && f.weightKg && f.activityLevel);
 
   useEffect(() => {
     api.get('/gym/profile')
@@ -54,9 +54,7 @@ export default function GymOnboarding() {
     setBusy(true);
     setError('');
     try {
-      const { data } = await api.put('/gym/profile', {
-        ...f, allergies: [...f.allergies, ...split(f.otherAllergies)], avoidFoods: split(f.avoidFoods)
-      });
+      const { data } = await api.put('/gym/profile', f);
       setResult(data);
       window.scrollTo({ top: 0, behavior: 'smooth' });
     } catch (err) {
@@ -80,19 +78,16 @@ export default function GymOnboarding() {
       <h3 className="page-title">Your gym profile</h3>
 
       {t && (
-        <div className="card stack targets">
-          <strong>Your daily targets</strong>
-          <div className="t-grid">
-            <div><b>{t.calories}</b><span>kcal</span></div>
-            <div><b>{t.protein} g</b><span>protein</span></div>
-            <div><b>{t.carbohydrates} g</b><span>carbs</span></div>
-            <div><b>{t.fat} g</b><span>fat</span></div>
-            <div><b>{t.fiber} g</b><span>fibre</span></div>
-            <div><b>{t.waterLitres} L</b><span>water</span></div>
+        <>
+          <BodySummary body={result.body} base="/gym" onChanged={(data) => setResult((r) => ({ ...r, ...data }))} />
+          <TargetsEditor details={result.details} base="/gym" onChanged={(data) => setResult((r) => ({ ...r, ...data }))} />
+          <MicroTargets micro={result.micro} />
+          <div className="card stack targets">
+            <div className="t-grid"><div><b>{t.waterLitres} L</b><span>water a day</span></div></div>
+            <p className="muted">Worked out from your details using {t.method}. Your body uses about {t.bmr} kcal at rest, and about {t.maintenanceCalories} kcal a day to stay the same weight. General reference limits: sodium under {t.reference.sodiumMaxMg} mg, calcium {t.reference.calciumMg} mg, iron {t.reference.ironMg} mg, potassium {t.reference.potassiumMg} mg.</p>
+            <Link to="/planner" className="btn btn-primary">Start planning my meals</Link>
           </div>
-          <p className="muted">Worked out from your details using {t.method}. Your body uses about {t.bmr} kcal at rest, and about {t.maintenanceCalories} kcal a day to stay the same weight. General reference limits: sodium under {t.reference.sodiumMaxMg} mg, calcium {t.reference.calciumMg} mg, iron {t.reference.ironMg} mg, potassium {t.reference.potassiumMg} mg.</p>
-          <Link to="/planner" className="btn btn-primary">Start planning my meals</Link>
-        </div>
+        </>
       )}
 
       <form className="stack" onSubmit={submit}>
@@ -108,9 +103,10 @@ export default function GymOnboarding() {
           </label>
         </div>
 
+        <GoalAndTarget plan="gym" f={f} set={set} ready={aboutDone} prefill={!result} />
+
         <div className="card stack">
-          <h4>Your goal and workouts</h4>
-          <label>Goal{sel('goal', [['fat_loss', 'Fat loss / weight loss'], ['muscle_gain', 'Muscle building / weight gain'], ['maintain', 'Maintain weight / stay fit']])}</label>
+          <h4>Your workouts</h4>
           <label>When do you work out?{sel('workoutSchedule', [['morning', 'Morning'], ['evening', 'Evening'], ['both', 'Morning and evening']])}</label>
           {f.workoutSchedule !== 'evening' && <label>Morning workout time<input type="time" value={f.morningTime} onChange={(e) => set({ morningTime: e.target.value })} /></label>}
           {f.workoutSchedule !== 'morning' && <label>Evening workout time<input type="time" value={f.eveningTime} onChange={(e) => set({ eveningTime: e.target.value })} /></label>}
@@ -120,12 +116,9 @@ export default function GymOnboarding() {
         <div className="card stack">
           <h4>Food and health</h4>
           <label>Food preference{sel('dietType', [['vegetarian', 'Vegetarian'], ['non-vegetarian', 'Non-vegetarian']])}</label>
-          <span className="lbl">Allergies (we hide these meals)</span>
-          <Toggles options={ALLERGIES.map((a) => [a, a])} value={f.allergies} onChange={(allergies) => set({ allergies })} />
-          <label>Other allergies (comma separated)<input value={f.otherAllergies} onChange={(e) => set({ otherAllergies: e.target.value })} placeholder="e.g. mustard" /></label>
-          <label>Foods you want to avoid (comma separated)<input value={f.avoidFoods} onChange={(e) => set({ avoidFoods: e.target.value })} placeholder="e.g. mushroom, brinjal" /></label>
           <span className="lbl">Health conditions (optional)</span>
-          <Toggles options={CONDITIONS} value={f.healthConditions} onChange={(healthConditions) => set({ healthConditions })} />
+          <Toggles options={DISEASES} value={f.healthConditions} onChange={(healthConditions) => set({ healthConditions })} />
+          <p className="muted">We hide meals that are marked as not suitable for your conditions, rank the most supportive ones first, and tell you when a meal has not been rated for your condition.</p>
         </div>
 
         <div className="card stack">
@@ -133,7 +126,7 @@ export default function GymOnboarding() {
             <input type="checkbox" checked={f.acceptedNotice} onChange={(e) => set({ acceptedNotice: e.target.checked })} />
             I understand these are general nutrition suggestions, not medical advice. I will check my diet with a doctor or dietitian if I have a health condition.
           </label>
-          <p className="muted">Allergy information on meals is entered by our team and can be incomplete. Always check ingredients yourself.</p>
+          <p className="muted">Meal ratings for health conditions are entered by our team. If a meal says it is not defined for your condition, check it once before you eat it.</p>
         </div>
 
         {error && <p className="error-text">{error}</p>}

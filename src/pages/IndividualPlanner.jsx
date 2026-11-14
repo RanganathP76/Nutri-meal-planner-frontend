@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { APP_SEED } from '../utils/seed';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import api, { errorMessage } from '../api/client';
 import { todayKey, addDays } from '../utils/date';
@@ -67,7 +68,7 @@ export default function IndividualPlanner() {
     let cancelled = false;
     setLoading(true);
     setError('');
-    api.get('/individual/recommendations', { params: { stepId, dietType, cuisine, date, picks: picksParam } })
+    api.get('/individual/recommendations', { params: { stepId, dietType, cuisine, date, picks: picksParam, seed: APP_SEED } })
       .then(({ data }) => { if (!cancelled) setInfo(data); })
       .catch((err) => { if (!cancelled) { setInfo(null); setError(errorMessage(err)); } })
       .finally(() => { if (!cancelled) setLoading(false); });

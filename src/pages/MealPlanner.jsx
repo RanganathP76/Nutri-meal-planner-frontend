@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { APP_SEED } from '../utils/seed';
 import { useSearchParams } from 'react-router-dom';
 import api, { errorMessage } from '../api/client';
 import { todayKey, addDays } from '../utils/date';
@@ -65,7 +66,7 @@ export default function MealPlanner() {
     let cancelled = false;
     setLoading(true);
     setError('');
-    const query = { mealType: slot, dietType, cuisine, date };
+    const query = { mealType: slot, dietType, cuisine, date, seed: APP_SEED };
     if (breakfastId) query.breakfastId = breakfastId;
     if (lunchId) query.lunchId = lunchId;
     if (dinnerId) query.dinnerId = dinnerId;

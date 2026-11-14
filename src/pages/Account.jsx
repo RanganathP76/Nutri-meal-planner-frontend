@@ -43,7 +43,7 @@ export default function Account() {
         {plan?.isActive && plan.planType === 'individual' && <Link to="/individual/setup" className="btn btn-light">My profile and daily targets</Link>}
       </div>
 
-      <p className="muted">Change password and food preferences will be added in a later step.</p>
+      <p className="muted"><Link to="/help">Help</Link> &middot; <Link to="/terms">Terms</Link> &middot; <Link to="/privacy">Privacy Policy</Link></p>
       <button className="btn btn-danger" onClick={handleLogout}>Log out</button>
     </div>
   );

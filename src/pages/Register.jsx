@@ -95,7 +95,7 @@ export default function Register() {
       <GoogleButton onCredential={onCredential} text="signup_with" disabled={busy || refState === 'checking'} />
       {busy && <p className="muted" style={{ textAlign: 'center' }}>Please wait...</p>}
       {error && <p className="error-text" style={{ textAlign: 'center' }}>{error}</p>}
-      <p className="muted legal">By continuing you agree to our Terms and Privacy Policy. We only use your Google name and email.</p>
+      <p className="muted legal">By continuing you agree to our <Link to="/terms" target="_blank">Terms</Link> and <Link to="/privacy" target="_blank">Privacy Policy</Link>. We only use your Google name and email.</p>
       <p className="switch">Already registered? <Link to="/login">Log in</Link></p>
 
       {pending && (

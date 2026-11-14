@@ -2,23 +2,21 @@ import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import api, { errorMessage } from '../api/client';
 import TargetsEditor from '../components/TargetsEditor';
+import MicroTargets from '../components/MicroTargets';
+import { GoalAndTarget, BodySummary } from '../components/BodyGoal';
+import { DISEASES } from '../utils/health';
 import './GymOnboarding.css';
 
-const ALLERGIES = ['dairy', 'gluten', 'nuts', 'egg', 'fish', 'soy', 'sesame', 'shellfish'];
-const CONDITIONS = [['diabetes', 'Diabetes'], ['hypertension_bp', 'Blood pressure'], ['thyroid', 'Thyroid'], ['high_cholesterol', 'High cholesterol']];
 const BLANK = {
-  gender: '', age: '', heightCm: '', weightKg: '', activityLevel: 'light', goal: 'stay_fit', dietType: 'vegetarian',
-  healthConditions: [], allergies: [], otherAllergies: '', avoidFoods: '', acceptedNotice: false
+  gender: '', age: '', heightCm: '', weightKg: '', targetWeightKg: '', activityLevel: 'light', goal: 'maintain', dietType: 'vegetarian',
+  healthConditions: [], acceptedNotice: false
 };
-const split = (t) => t.split(',').map((x) => x.trim()).filter(Boolean);
 const s = (v) => (v == null ? '' : String(v));
 
 const fromProfile = (p) => ({
-  ...BLANK, gender: p.gender, age: s(p.age), heightCm: s(p.heightCm), weightKg: s(p.weightKg),
+  ...BLANK, gender: p.gender, age: s(p.age), heightCm: s(p.heightCm), weightKg: s(p.weightKg), targetWeightKg: s(p.targetWeightKg),
   activityLevel: p.activityLevel, goal: p.goal, dietType: p.dietType, healthConditions: p.healthConditions || [],
-  allergies: (p.allergies || []).filter((a) => ALLERGIES.includes(a)),
-  otherAllergies: (p.allergies || []).filter((a) => !ALLERGIES.includes(a)).join(', '),
-  avoidFoods: (p.avoidFoods || []).join(', '), acceptedNotice: false
+  acceptedNotice: false
 });
 
 function Toggles({ options, value, onChange }) {
@@ -40,6 +38,7 @@ export default function IndividualOnboarding() {
   const [message, setMessage] = useState('');
   const [busy, setBusy] = useState(false);
   const set = (patch) => setF((o) => ({ ...o, ...patch }));
+  const aboutDone = Boolean(f.gender && f.age && f.heightCm && f.weightKg && f.activityLevel);
 
   useEffect(() => {
     api.get('/individual/profile')
@@ -54,9 +53,7 @@ export default function IndividualOnboarding() {
     setError('');
     setMessage('');
     try {
-      const { data } = await api.put('/individual/profile', {
-        ...f, allergies: [...f.allergies, ...split(f.otherAllergies)], avoidFoods: split(f.avoidFoods)
-      });
+      const { data } = await api.put('/individual/profile', f);
       setResult(data);
       if (data.customCleared) setMessage('Your details changed, so your targets were recalculated.');
       window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -84,7 +81,9 @@ export default function IndividualOnboarding() {
       {result && (
         <>
           {message && <p className="success-text">{message}</p>}
-          <TargetsEditor details={result.details} onChanged={(data) => setResult((r) => ({ ...r, ...data }))} />
+          <BodySummary body={result.body} base="/individual" onChanged={(data) => setResult((r) => ({ ...r, ...data }))} />
+          <TargetsEditor details={result.details} base="/individual" onChanged={(data) => setResult((r) => ({ ...r, ...data }))} />
+          <MicroTargets micro={result.micro} />
           <p className="muted">Worked out using {result.method}. Your body uses about {result.bmr} kcal at rest and about {result.maintenanceCalories} kcal a day to stay the same weight.</p>
           <Link to="/planner" className="btn btn-primary">Start planning my meals</Link>
         </>
@@ -102,20 +101,14 @@ export default function IndividualOnboarding() {
           </label>
         </div>
 
-        <div className="card stack">
-          <h4>Your goal</h4>
-          <label>Goal{sel('goal', [['weight_loss', 'Lose weight'], ['weight_gain', 'Gain weight'], ['maintain', 'Maintain my weight'], ['stay_fit', 'Stay fit and healthy']])}</label>
-        </div>
+        <GoalAndTarget plan="individual" f={f} set={set} ready={aboutDone} prefill={!result} />
 
         <div className="card stack">
           <h4>Food and health</h4>
           <label>Food preference{sel('dietType', [['vegetarian', 'Vegetarian'], ['non-vegetarian', 'Non-vegetarian']])}</label>
-          <span className="lbl">Allergies (we hide these meals)</span>
-          <Toggles options={ALLERGIES.map((a) => [a, a])} value={f.allergies} onChange={(allergies) => set({ allergies })} />
-          <label>Other allergies (comma separated)<input value={f.otherAllergies} onChange={(e) => set({ otherAllergies: e.target.value })} placeholder="e.g. mustard" /></label>
-          <label>Foods you want to avoid (comma separated)<input value={f.avoidFoods} onChange={(e) => set({ avoidFoods: e.target.value })} placeholder="e.g. mushroom, brinjal" /></label>
           <span className="lbl">Health conditions (optional)</span>
-          <Toggles options={CONDITIONS} value={f.healthConditions} onChange={(healthConditions) => set({ healthConditions })} />
+          <Toggles options={DISEASES} value={f.healthConditions} onChange={(healthConditions) => set({ healthConditions })} />
+          <p className="muted">We hide meals that are marked as not suitable for your conditions, rank the most supportive ones first, and tell you when a meal has not been rated for your condition.</p>
         </div>
 
         <div className="card stack">
@@ -123,7 +116,7 @@ export default function IndividualOnboarding() {
             <input type="checkbox" checked={f.acceptedNotice} onChange={(e) => set({ acceptedNotice: e.target.checked })} />
             I understand these are general nutrition suggestions, not medical advice. I will check my diet with a doctor or dietitian if I have a health condition.
           </label>
-          <p className="muted">Allergy information on meals is entered by our team and can be incomplete. Always check ingredients yourself.</p>
+          <p className="muted">Meal ratings for health conditions are entered by our team. If a meal says it is not defined for your condition, check it once before you eat it.</p>
         </div>
 
         {error && <p className="error-text">{error}</p>}

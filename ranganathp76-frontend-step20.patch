@@ -1,0 +1,86 @@
+diff --git a/src/components/MealCard.css b/src/components/MealCard.css
+index 756b887..6f167a5 100644
+--- a/src/components/MealCard.css
++++ b/src/components/MealCard.css
+@@ -23,3 +23,5 @@
+ .nut-table td { padding: 2px 0; border-bottom: 1px solid var(--border); }
+ .nut-table td:last-child { text-align: right; }
+ .nut-table .na { color: #9ca3af; }
++.micro-targets summary { cursor: pointer; }
++.nut-table th { font-size: 0.8rem; font-weight: 600; text-align: right; padding-bottom: 2px; }
+diff --git a/src/components/MicroTargets.jsx b/src/components/MicroTargets.jsx
+new file mode 100644
+index 0000000..e0943cc
+--- /dev/null
++++ b/src/components/MicroTargets.jsx
+@@ -0,0 +1,30 @@
++import { NUTRIENT_GROUP_TITLES } from '../utils/health';
++
++// Daily vitamin, mineral and other limits worked out for this person (age, gender and the calorie target)
++export default function MicroTargets({ micro }) {
++  if (!micro) return null;
++  const cell = (v, unit) => (v == null ? <span className="na">-</span> : `${v} ${unit}`);
++  return (
++    <details className="card micro-targets">
++      <summary><strong>Your daily vitamin and mineral needs</strong></summary>
++      <p className="muted">Worked out from your age, gender and calorie target. "At least" is what to aim for each day. "No more than" is a daily limit. A dash means no standard is set. General guidance only, not medical advice.</p>
++      {Object.entries(micro).map(([group, list]) => (
++        <div key={group} className="nut-group">
++          <strong>{NUTRIENT_GROUP_TITLES[group]}</strong>
++          <table className="nut-table">
++            <thead><tr><th align="left">Nutrient</th><th>At least</th><th>No more than</th></tr></thead>
++            <tbody>
++              {Object.entries(list).map(([key, v]) => (
++                <tr key={key}>
++                  <td>{v.label}{v.note && <small className="muted"> ({v.note})</small>}</td>
++                  <td>{cell(v.min, v.unit)}</td>
++                  <td>{cell(v.max, v.unit)}</td>
++                </tr>
++              ))}
++            </tbody>
++          </table>
++        </div>
++      ))}
++    </details>
++  );
++}
+diff --git a/src/pages/GymOnboarding.jsx b/src/pages/GymOnboarding.jsx
+index 2c61078..9605190 100644
+--- a/src/pages/GymOnboarding.jsx
++++ b/src/pages/GymOnboarding.jsx
+@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
+ import api, { errorMessage } from '../api/client';
+ import { GoalAndTarget, BodySummary } from '../components/BodyGoal';
+ import TargetsEditor from '../components/TargetsEditor';
++import MicroTargets from '../components/MicroTargets';
+ import { DISEASES } from '../utils/health';
+ import './GymOnboarding.css';
+ 
+@@ -80,6 +81,7 @@ export default function GymOnboarding() {
+         <>
+           <BodySummary body={result.body} base="/gym" onChanged={(data) => setResult((r) => ({ ...r, ...data }))} />
+           <TargetsEditor details={result.details} base="/gym" onChanged={(data) => setResult((r) => ({ ...r, ...data }))} />
++          <MicroTargets micro={result.micro} />
+           <div className="card stack targets">
+             <div className="t-grid"><div><b>{t.waterLitres} L</b><span>water a day</span></div></div>
+             <p className="muted">Worked out from your details using {t.method}. Your body uses about {t.bmr} kcal at rest, and about {t.maintenanceCalories} kcal a day to stay the same weight. General reference limits: sodium under {t.reference.sodiumMaxMg} mg, calcium {t.reference.calciumMg} mg, iron {t.reference.ironMg} mg, potassium {t.reference.potassiumMg} mg.</p>
+diff --git a/src/pages/IndividualOnboarding.jsx b/src/pages/IndividualOnboarding.jsx
+index 826d606..51f5ed4 100644
+--- a/src/pages/IndividualOnboarding.jsx
++++ b/src/pages/IndividualOnboarding.jsx
+@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
+ import { Link } from 'react-router-dom';
+ import api, { errorMessage } from '../api/client';
+ import TargetsEditor from '../components/TargetsEditor';
++import MicroTargets from '../components/MicroTargets';
+ import { GoalAndTarget, BodySummary } from '../components/BodyGoal';
+ import { DISEASES } from '../utils/health';
+ import './GymOnboarding.css';
+@@ -82,6 +83,7 @@ export default function IndividualOnboarding() {
+           {message && <p className="success-text">{message}</p>}
+           <BodySummary body={result.body} base="/individual" onChanged={(data) => setResult((r) => ({ ...r, ...data }))} />
+           <TargetsEditor details={result.details} base="/individual" onChanged={(data) => setResult((r) => ({ ...r, ...data }))} />
++          <MicroTargets micro={result.micro} />
+           <p className="muted">Worked out using {result.method}. Your body uses about {result.bmr} kcal at rest and about {result.maintenanceCalories} kcal a day to stay the same weight.</p>
+           <Link to="/planner" className="btn btn-primary">Start planning my meals</Link>
+         </>

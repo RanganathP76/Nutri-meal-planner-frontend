@@ -1,12 +1,15 @@
 import axios from 'axios';
 
 export const API_BASE = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
-const KEY = 'admin_token';
+const KEY = 'nutri_token';
 
+// The login is kept on this device until the customer logs in somewhere else (the server then ends this one).
+// localStorage survives closing the browser. Every access is wrapped because some browsers block it.
+const read = (store) => { try { return store.getItem(KEY); } catch { return null; } };
 export const tokenStore = {
-  get: () => sessionStorage.getItem(KEY),
-  set: (t) => sessionStorage.setItem(KEY, t),
-  clear: () => sessionStorage.removeItem(KEY)
+  get: () => read(localStorage) || read(sessionStorage),
+  set: (t) => { try { localStorage.setItem(KEY, t); } catch { try { sessionStorage.setItem(KEY, t); } catch { /* ignore */ } } },
+  clear: () => { for (const s of [localStorage, sessionStorage]) { try { s.removeItem(KEY); } catch { /* ignore */ } } }
 };
 
 let onUnauthorized = null;

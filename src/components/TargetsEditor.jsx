@@ -1,20 +1,23 @@
 import { useState } from 'react';
 import api, { errorMessage } from '../api/client';
 import './TargetsEditor.css';
+import './BodyGoal.css';
 
 const ROWS = [['calories', 'Calories', 'kcal'], ['protein', 'Protein', 'g'], ['carbohydrates', 'Carbohydrates', 'g'], ['fat', 'Fat', 'g'], ['fiber', 'Fibre', 'g']];
 
 // The server calculates and validates everything. This only shows and sends edits.
-export default function TargetsEditor({ details, eaten, onChanged }) {
+export default function TargetsEditor({ details, eaten, onChanged, base = '/individual' }) {
   const [draft, setDraft] = useState({});
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
+  const [warnings, setWarnings] = useState([]);
 
   const send = async (fn) => {
     setBusy(true);
     setError('');
     try {
       const { data } = await fn();
+      setWarnings(data.warnings || []);
       setDraft({});
       onChanged(data);
     } catch (err) {
@@ -24,9 +27,9 @@ export default function TargetsEditor({ details, eaten, onChanged }) {
     }
   };
 
-  const save = (k) => send(() => api.patch('/individual/targets', { [k]: draft[k] }));
-  const reset = (k) => send(() => api.patch('/individual/targets', { [k]: null }));
-  const resetAll = () => send(() => api.post('/individual/targets/reset'));
+  const save = (k) => send(() => api.patch(`${base}/targets`, { [k]: draft[k] }));
+  const reset = (k) => send(() => api.patch(`${base}/targets`, { [k]: null }));
+  const resetAll = () => send(() => api.post(`${base}/targets/reset`));
   const anyCustom = ROWS.some(([k]) => details[k].custom);
 
   return (
@@ -64,7 +67,9 @@ export default function TargetsEditor({ details, eaten, onChanged }) {
           );
         })}
       </div>
-      {error && <p className="error-text">{error}</p>}
+      {error && <p className="error-text"><strong>Cannot save this.</strong> {error}</p>}
+      {warnings.length > 0 && <ul className="warn-list">{warnings.map((w) => <li key={w}>{w}</li>)}</ul>}
+      <p className="muted">There are safe limits on these numbers to protect your health. Numbers outside them cannot be saved.</p>
     </div>
   );
 }

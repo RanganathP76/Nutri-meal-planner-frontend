@@ -38,9 +38,7 @@ export function AuthProvider({ children }) {
       return;
     }
     refreshUser()
-      .catch(() => {
-        logout('Session expired. Please log in again.');
-      })
+      .catch(() => { /* a 401 is handled by the api client; a network error keeps the login */ })
       .finally(() => setLoading(false));
   }, [refreshUser, logout]);
 

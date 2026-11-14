@@ -35,6 +35,7 @@ export default function Login() {
       {busy && <p className="muted" style={{ textAlign: 'center' }}>Signing you in...</p>}
       {error && <p className="error-text" style={{ textAlign: 'center' }}>{error}</p>}
       <p className="muted legal">Using a new phone or computer? Log in with the same Google account. Only one device can be logged in at a time, so your other device will be logged out.</p>
+      <p className="muted legal"><Link to="/terms">Terms</Link> &middot; <Link to="/privacy">Privacy</Link> &middot; <Link to="/help">Help</Link></p>
       <p className="switch">New here? <Link to="/register">Create an account</Link></p>
     </div>
   );

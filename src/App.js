@@ -5,7 +5,6 @@ import AppLayout from './components/AppLayout';
 import Login from './pages/Login';
 import Register from './pages/Register';
 import Home from './pages/Home';
-import MealPlanner from './pages/MealPlanner';
 import Calendar from './pages/Calendar';
 import Wallet from './pages/Wallet';
 import Plans from './pages/Plans';
@@ -14,8 +13,9 @@ import PaymentResult from './pages/PaymentResult';
 import PlannerSwitch from './pages/PlannerSwitch';
 import GymOnboarding from './pages/GymOnboarding';
 import IndividualOnboarding from './pages/IndividualOnboarding';
-
-console.log({ AuthProvider, ProtectedRoute, AppLayout, Login, Register, Home, MealPlanner, Calendar, Wallet, Plans, Account });
+import Terms from './pages/Terms';
+import Privacy from './pages/Privacy';
+import Help from './pages/Help';
 
 export default function App() {
   return (
@@ -24,10 +24,12 @@ export default function App() {
         <Routes>
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
+          <Route path="/terms" element={<Terms />} />
+          <Route path="/privacy" element={<Privacy />} />
+          <Route path="/help" element={<Help />} />
           <Route element={<ProtectedRoute />}>
             <Route element={<AppLayout />}>
               <Route path="/" element={<Home />} />
-              <Route path="/planner" element={<MealPlanner />} />
               <Route path="/calendar" element={<Calendar />} />
               <Route path="/wallet" element={<Wallet />} />
               <Route path="/plans" element={<Plans />} />

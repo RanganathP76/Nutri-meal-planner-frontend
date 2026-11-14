@@ -97,6 +97,10 @@ export default function Wallet() {
           <button type="button" className={method === 'bank' ? 'on' : ''} onClick={() => setMethod('bank')}>Bank account</button>
         </div>
 
+        <p className="muted">
+          Each withdrawal: ₹{wallet.rules.minWithdrawalRupees} to ₹{wallet.rules.maxWithdrawalRupees}.
+          You can still withdraw up to ₹{Math.min(wallet.rules.leftTodayRupees, wallet.balance)} today.
+        </p>
         <input type="number" inputMode="numeric" min="1" step="1" placeholder={`Amount in ₹ (minimum ₹${wallet.rules.minWithdrawalRupees})`}
           value={form.amount} onChange={(e) => set({ amount: e.target.value })} disabled={!canRequest} required />
 
