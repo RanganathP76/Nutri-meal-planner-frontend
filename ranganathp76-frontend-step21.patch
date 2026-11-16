@@ -1,0 +1,187 @@
+From 818869b316a3987ed331e36ca89be0308947bbc2 Mon Sep 17 00:00:00 2001
+From: Claude <noreply@anthropic.com>
+Date: Sat, 14 Nov 2026 22:56:23 +0000
+Subject: [PATCH] Step 21: ICMR-NIN 2020 reference, rating checks, exclusive
+ BP/thyroid, 50 Indian meals
+
+Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>
+Claude-Session: https://claude.ai/code/session_0162ttsDoaQPerVfoJDrn1LQ
+---
+ src/components/MealCard.jsx        |  7 ++++++-
+ src/components/MicroTargets.jsx    | 17 +++++++++++++----
+ src/pages/GymOnboarding.jsx        |  7 ++++---
+ src/pages/IndividualOnboarding.jsx |  5 +++--
+ src/utils/health.js                | 17 +++++++++++++----
+ 5 files changed, 39 insertions(+), 14 deletions(-)
+
+diff --git a/src/components/MealCard.jsx b/src/components/MealCard.jsx
+index 27b128a..e00587a 100644
+--- a/src/components/MealCard.jsx
++++ b/src/components/MealCard.jsx
+@@ -24,11 +24,16 @@ export default function MealCard({ meal, selected, onSelect }) {
+         )}
+         {rec?.healthFlags?.length > 0 && (
+           <ul className="warn-list">
+-            {rec.healthFlags.filter((f) => f.kind !== 'not_applied').map((f) => (
++            {rec.healthFlags.filter((f) => f.kind !== 'not_applied' && f.kind !== 'conflict').map((f) => (
+               <li key={f.disease} style={{ color: f.kind === 'suitable' ? '#15803d' : undefined }}>
+                 {DISEASE_LABEL[f.disease]}: {f.label}
+               </li>
+             ))}
++            {rec.healthFlags.filter((f) => f.kind === 'conflict').map((f) => (
++              <li key={`c-${f.disease}`} style={{ color: '#92400e' }}>
++                {DISEASE_LABEL[f.disease]}: rated suitable, but its own numbers say otherwise ({f.conflict}). The rating was not used. Check this meal once.
++              </li>
++            ))}
+             {rec.healthFlags.some((f) => f.kind === 'not_applied') && (
+               <li style={{ color: '#92400e' }}>
+                 Not defined for {rec.healthFlags.filter((f) => f.kind === 'not_applied').map((f) => DISEASE_LABEL[f.disease]).join(', ')}.
+diff --git a/src/components/MicroTargets.jsx b/src/components/MicroTargets.jsx
+index e0943cc..96c4b56 100644
+--- a/src/components/MicroTargets.jsx
++++ b/src/components/MicroTargets.jsx
+@@ -1,24 +1,33 @@
+ import { NUTRIENT_GROUP_TITLES } from '../utils/health';
+ 
+-// Daily vitamin, mineral and other limits worked out for this person (age, gender and the calorie target)
++// Daily vitamin, mineral and other numbers worked out for this person from the ICMR-NIN 2020 tables
++// (age, sex) and the calorie target (which holds height, weight, activity and goal).
+ export default function MicroTargets({ micro }) {
+   if (!micro) return null;
+   const cell = (v, unit) => (v == null ? <span className="na">-</span> : `${v} ${unit}`);
++  const first = Object.values(micro).flatMap((g) => Object.values(g))[0];
+   return (
+     <details className="card micro-targets">
+       <summary><strong>Your daily vitamin and mineral needs</strong></summary>
+-      <p className="muted">Worked out from your age, gender and calorie target. "At least" is what to aim for each day. "No more than" is a daily limit. A dash means no standard is set. General guidance only, not medical advice.</p>
++      <p className="muted">
++        Based on ICMR-NIN 2020 (Nutrient Requirements for Indians){first?.band ? ` for: ${first.band}` : ''}, and your calorie target.
++        "Aim for" is the RDA, or the AI where there is not enough evidence for an RDA. "Stay under" is a public-health limit,
++        or a stricter one for your health condition. "Upper limit" is the highest safe daily intake; where it says
++        "supplements only", it is about tablets and fortified food, not normal meals. A dash means no standard is set.
++        General guidance only, not medical advice.
++      </p>
+       {Object.entries(micro).map(([group, list]) => (
+         <div key={group} className="nut-group">
+           <strong>{NUTRIENT_GROUP_TITLES[group]}</strong>
+           <table className="nut-table">
+-            <thead><tr><th align="left">Nutrient</th><th>At least</th><th>No more than</th></tr></thead>
++            <thead><tr><th align="left">Nutrient</th><th>Aim for</th><th>Stay under</th><th>Upper limit</th></tr></thead>
+             <tbody>
+               {Object.entries(list).map(([key, v]) => (
+                 <tr key={key}>
+                   <td>{v.label}{v.note && <small className="muted"> ({v.note})</small>}</td>
+-                  <td>{cell(v.min, v.unit)}</td>
++                  <td>{cell(v.min, v.unit)}{v.min != null && v.minKind && <small className="muted"> {v.minKind}</small>}</td>
+                   <td>{cell(v.max, v.unit)}</td>
++                  <td>{cell(v.ul, v.unit)}{v.ul != null && v.ulScope === 'supplement' && <small className="muted"> supplements only</small>}</td>
+                 </tr>
+               ))}
+             </tbody>
+diff --git a/src/pages/GymOnboarding.jsx b/src/pages/GymOnboarding.jsx
+index 9605190..eb67a8e 100644
+--- a/src/pages/GymOnboarding.jsx
++++ b/src/pages/GymOnboarding.jsx
+@@ -4,7 +4,7 @@ import api, { errorMessage } from '../api/client';
+ import { GoalAndTarget, BodySummary } from '../components/BodyGoal';
+ import TargetsEditor from '../components/TargetsEditor';
+ import MicroTargets from '../components/MicroTargets';
+-import { DISEASES } from '../utils/health';
++import { DISEASES, toggleCondition } from '../utils/health';
+ import './GymOnboarding.css';
+ 
+ const BLANK = {
+@@ -23,7 +23,7 @@ const fromProfile = (p) => ({
+ });
+ 
+ function Toggles({ options, value, onChange }) {
+-  const flip = (k) => onChange(value.includes(k) ? value.filter((x) => x !== k) : [...value, k]);
++  const flip = (k) => onChange(toggleCondition(value, k));
+   return (
+     <div className="toggles">
+       {options.map(([k, label]) => (
+@@ -84,7 +84,7 @@ export default function GymOnboarding() {
+           <MicroTargets micro={result.micro} />
+           <div className="card stack targets">
+             <div className="t-grid"><div><b>{t.waterLitres} L</b><span>water a day</span></div></div>
+-            <p className="muted">Worked out from your details using {t.method}. Your body uses about {t.bmr} kcal at rest, and about {t.maintenanceCalories} kcal a day to stay the same weight. General reference limits: sodium under {t.reference.sodiumMaxMg} mg, calcium {t.reference.calciumMg} mg, iron {t.reference.ironMg} mg, potassium {t.reference.potassiumMg} mg.</p>
++            <p className="muted">Worked out from your details using {t.method}. Your body uses about {t.bmr} kcal at rest, and about {t.maintenanceCalories} kcal a day to stay the same weight. Your vitamin and mineral needs (ICMR-NIN 2020) are in the table below.</p>
+             <Link to="/planner" className="btn btn-primary">Start planning my meals</Link>
+           </div>
+         </>
+@@ -117,6 +117,7 @@ export default function GymOnboarding() {
+           <h4>Food and health</h4>
+           <label>Food preference{sel('dietType', [['vegetarian', 'Vegetarian'], ['non-vegetarian', 'Non-vegetarian']])}</label>
+           <span className="lbl">Health conditions (optional)</span>
++          <p className="muted">Choose only one for blood pressure (high or low) and one for thyroid (under or over active).</p>
+           <Toggles options={DISEASES} value={f.healthConditions} onChange={(healthConditions) => set({ healthConditions })} />
+           <p className="muted">We hide meals that are marked as not suitable for your conditions, rank the most supportive ones first, and tell you when a meal has not been rated for your condition.</p>
+         </div>
+diff --git a/src/pages/IndividualOnboarding.jsx b/src/pages/IndividualOnboarding.jsx
+index 51f5ed4..cfe2842 100644
+--- a/src/pages/IndividualOnboarding.jsx
++++ b/src/pages/IndividualOnboarding.jsx
+@@ -4,7 +4,7 @@ import api, { errorMessage } from '../api/client';
+ import TargetsEditor from '../components/TargetsEditor';
+ import MicroTargets from '../components/MicroTargets';
+ import { GoalAndTarget, BodySummary } from '../components/BodyGoal';
+-import { DISEASES } from '../utils/health';
++import { DISEASES, toggleCondition } from '../utils/health';
+ import './GymOnboarding.css';
+ 
+ const BLANK = {
+@@ -20,7 +20,7 @@ const fromProfile = (p) => ({
+ });
+ 
+ function Toggles({ options, value, onChange }) {
+-  const flip = (k) => onChange(value.includes(k) ? value.filter((x) => x !== k) : [...value, k]);
++  const flip = (k) => onChange(toggleCondition(value, k));
+   return (
+     <div className="toggles">
+       {options.map(([k, label]) => (
+@@ -107,6 +107,7 @@ export default function IndividualOnboarding() {
+           <h4>Food and health</h4>
+           <label>Food preference{sel('dietType', [['vegetarian', 'Vegetarian'], ['non-vegetarian', 'Non-vegetarian']])}</label>
+           <span className="lbl">Health conditions (optional)</span>
++          <p className="muted">Choose only one for blood pressure (high or low) and one for thyroid (under or over active).</p>
+           <Toggles options={DISEASES} value={f.healthConditions} onChange={(healthConditions) => set({ healthConditions })} />
+           <p className="muted">We hide meals that are marked as not suitable for your conditions, rank the most supportive ones first, and tell you when a meal has not been rated for your condition.</p>
+         </div>
+diff --git a/src/utils/health.js b/src/utils/health.js
+index 79618e5..4531871 100644
+--- a/src/utils/health.js
++++ b/src/utils/health.js
+@@ -189,13 +189,13 @@ export const NUTRIENT_GROUPS = {
+       unit: 'mg'
+     },
+     {
+-      key: 'omega3',
+-      label: 'Omega-3',
++      key: 'ala',
++      label: 'Omega-3 (ALA)',
+       unit: 'g'
+     },
+     {
+-      key: 'omega6',
+-      label: 'Omega-6',
++      key: 'linoleicAcid',
++      label: 'Omega-6 (linoleic acid)',
+       unit: 'g'
+     },
+     {
+@@ -221,3 +221,12 @@ export const NUTRIENT_GROUPS = {
+   ]
+ };
+ export const NUTRIENT_GROUP_TITLES = { vitamins: 'Vitamins', minerals: 'Minerals', additional: 'Other nutritional factors' };
++
++// A person has only one of each pair: blood pressure is high or low, thyroid is under or over active.
++export const EXCLUSIVE_GROUPS = [['hypertension_bp', 'low_bp'], ['hypothyroidism', 'hyperthyroidism']];
++// Ticking one condition unticks its partner
++export function toggleCondition(list, key) {
++  if (list.includes(key)) return list.filter((x) => x !== key);
++  const partner = EXCLUSIVE_GROUPS.find((g) => g.includes(key))?.find((k) => k !== key);
++  return [...list.filter((x) => x !== partner), key];
++}
+-- 
+2.43.0
+

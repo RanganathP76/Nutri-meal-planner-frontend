@@ -189,13 +189,13 @@ export const NUTRIENT_GROUPS = {
       unit: 'mg'
     },
     {
-      key: 'omega3',
-      label: 'Omega-3',
+      key: 'ala',
+      label: 'Omega-3 (ALA)',
       unit: 'g'
     },
     {
-      key: 'omega6',
-      label: 'Omega-6',
+      key: 'linoleicAcid',
+      label: 'Omega-6 (linoleic acid)',
       unit: 'g'
     },
     {
@@ -221,3 +221,12 @@ export const NUTRIENT_GROUPS = {
   ]
 };
 export const NUTRIENT_GROUP_TITLES = { vitamins: 'Vitamins', minerals: 'Minerals', additional: 'Other nutritional factors' };
+
+// A person has only one of each pair: blood pressure is high or low, thyroid is under or over active.
+export const EXCLUSIVE_GROUPS = [['hypertension_bp', 'low_bp'], ['hypothyroidism', 'hyperthyroidism']];
+// Ticking one condition unticks its partner
+export function toggleCondition(list, key) {
+  if (list.includes(key)) return list.filter((x) => x !== key);
+  const partner = EXCLUSIVE_GROUPS.find((g) => g.includes(key))?.find((k) => k !== key);
+  return [...list.filter((x) => x !== partner), key];
+}

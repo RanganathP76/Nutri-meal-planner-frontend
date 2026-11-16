@@ -24,9 +24,14 @@ export default function MealCard({ meal, selected, onSelect }) {
         )}
         {rec?.healthFlags?.length > 0 && (
           <ul className="warn-list">
-            {rec.healthFlags.filter((f) => f.kind !== 'not_applied').map((f) => (
+            {rec.healthFlags.filter((f) => f.kind !== 'not_applied' && f.kind !== 'conflict').map((f) => (
               <li key={f.disease} style={{ color: f.kind === 'suitable' ? '#15803d' : undefined }}>
                 {DISEASE_LABEL[f.disease]}: {f.label}
+              </li>
+            ))}
+            {rec.healthFlags.filter((f) => f.kind === 'conflict').map((f) => (
+              <li key={`c-${f.disease}`} style={{ color: '#92400e' }}>
+                {DISEASE_LABEL[f.disease]}: rated suitable, but its own numbers say otherwise ({f.conflict}). The rating was not used. Check this meal once.
               </li>
             ))}
             {rec.healthFlags.some((f) => f.kind === 'not_applied') && (

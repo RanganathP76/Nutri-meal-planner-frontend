@@ -4,7 +4,7 @@ import api, { errorMessage } from '../api/client';
 import TargetsEditor from '../components/TargetsEditor';
 import MicroTargets from '../components/MicroTargets';
 import { GoalAndTarget, BodySummary } from '../components/BodyGoal';
-import { DISEASES } from '../utils/health';
+import { DISEASES, toggleCondition } from '../utils/health';
 import './GymOnboarding.css';
 
 const BLANK = {
@@ -20,7 +20,7 @@ const fromProfile = (p) => ({
 });
 
 function Toggles({ options, value, onChange }) {
-  const flip = (k) => onChange(value.includes(k) ? value.filter((x) => x !== k) : [...value, k]);
+  const flip = (k) => onChange(toggleCondition(value, k));
   return (
     <div className="toggles">
       {options.map(([k, label]) => (
@@ -107,6 +107,7 @@ export default function IndividualOnboarding() {
           <h4>Food and health</h4>
           <label>Food preference{sel('dietType', [['vegetarian', 'Vegetarian'], ['non-vegetarian', 'Non-vegetarian']])}</label>
           <span className="lbl">Health conditions (optional)</span>
+          <p className="muted">Choose only one for blood pressure (high or low) and one for thyroid (under or over active).</p>
           <Toggles options={DISEASES} value={f.healthConditions} onChange={(healthConditions) => set({ healthConditions })} />
           <p className="muted">We hide meals that are marked as not suitable for your conditions, rank the most supportive ones first, and tell you when a meal has not been rated for your condition.</p>
         </div>
