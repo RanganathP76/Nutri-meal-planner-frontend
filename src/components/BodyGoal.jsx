@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import api, { errorMessage } from '../api/client';
-import { GOALS, GOAL_DIRECTION } from '../utils/health';
+import { GOALS, GOAL_DIRECTION, reconcileGoal } from '../utils/health';
 import './BodyGoal.css';
 
 const CATEGORY = { underweight: 'Below healthy range', healthy: 'Healthy range', overweight: 'Above healthy range', obese: 'Well above healthy range' };
@@ -26,6 +26,7 @@ function targetProblem(goal, weightKg, target, allowed) {
 // weight for the customer (until they change them), and lets them pick their own within safe limits.
 export function GoalAndTarget({ plan, f, set, ready, prefill = true, children }) {
   const [s, setS] = useState(null);
+  const [goalNote, setGoalNote] = useState('');
   const touched = useRef(Boolean(f.targetWeightKg)); // an existing profile keeps its saved goal and target
   const h = Number(f.heightCm);
   const w = Number(f.weightKg);
@@ -74,8 +75,9 @@ export function GoalAndTarget({ plan, f, set, ready, prefill = true, children })
           </select>
         </label>
         <label>Target weight (kg)
-          <input type="number" step="0.1" min="30" max="250" value={f.targetWeightKg} onChange={(e) => { touched.current = true; set({ targetWeightKg: e.target.value }); }} />
+          <input type="number" step="0.1" min="30" max="250" value={f.targetWeightKg} onChange={(e) => { touched.current = true; const r = reconcileGoal(f.goal, w, e.target.value); setGoalNote(r.note || ''); set(r.goal !== f.goal ? { targetWeightKg: e.target.value, goal: r.goal } : { targetWeightKg: e.target.value }); }} />
         </label>
+        {goalNote && <p className="success-text">{goalNote}</p>}
         {s && <p className="muted">Healthy weight for your height is {s.healthyRange.minKg} to {s.healthyRange.maxKg} kg. You can set a target up to 3 kg below or above that ({s.allowedTargetRange.minKg} to {s.allowedTargetRange.maxKg} kg), but not further.</p>}
         {problem && <p className="error-text">{problem}</p>}
         {children}

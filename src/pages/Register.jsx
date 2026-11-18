@@ -20,6 +20,7 @@ export default function Register() {
   const [pending, setPending] = useState(null);         // Google sign-in waiting for the popup answer
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
+  const [agreed, setAgreed] = useState(false);          // one box covers terms, privacy and the health/estimates notice
 
   // A code from the link (or saved earlier) is checked first. If it is real, no input box is shown.
   useEffect(() => {
@@ -92,10 +93,18 @@ export default function Register() {
         </div>
       )}
 
-      <GoogleButton onCredential={onCredential} text="signup_with" disabled={busy || refState === 'checking'} />
+      <label className="tick consent">
+        <input type="checkbox" checked={agreed} onChange={(e) => setAgreed(e.target.checked)} />
+        <span>
+          I agree to the <Link to="/terms" target="_blank">Terms of Service</Link>, <Link to="/privacy" target="_blank">Privacy Policy</Link> and{' '}
+          <Link to="/disclaimer" target="_blank">Health Disclaimer</Link>, and I understand that nutrition values are estimates and not medical advice.
+        </span>
+      </label>
+      {!agreed && <p className="muted">Tick the box above to continue.</p>}
+      <GoogleButton onCredential={onCredential} text="signup_with" disabled={!agreed || busy || refState === 'checking'} />
       {busy && <p className="muted" style={{ textAlign: 'center' }}>Please wait...</p>}
       {error && <p className="error-text" style={{ textAlign: 'center' }}>{error}</p>}
-      <p className="muted legal">By continuing you agree to our <Link to="/terms" target="_blank">Terms</Link> and <Link to="/privacy" target="_blank">Privacy Policy</Link>. We only use your Google name and email.</p>
+      <p className="muted legal">We only use your Google name and email to create your account.</p>
       <p className="switch">Already registered? <Link to="/login">Log in</Link></p>
 
       {pending && (

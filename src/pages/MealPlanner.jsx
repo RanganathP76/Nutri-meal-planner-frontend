@@ -1,9 +1,10 @@
+import DaySuggestions from '../components/DaySuggestions';
 import { useEffect, useState } from 'react';
 import { APP_SEED } from '../utils/seed';
 import { useSearchParams } from 'react-router-dom';
 import api, { errorMessage } from '../api/client';
 import { todayKey, addDays } from '../utils/date';
-import MealCard from '../components/MealCard';
+import MealPicker, { PickedSummary } from '../components/MealPicker';
 import NutritionSummary from '../components/NutritionSummary';
 import './MealPlanner.css';
 import { Link } from 'react-router-dom';
@@ -83,8 +84,16 @@ export default function MealPlanner() {
     return () => { cancelled = true; };
   }, [slot, dietType, cuisine, date, breakfastId, lunchId, dinnerId]);
 
-  const choose = (meal) =>
-    setSelected((s) => ({ ...s, [slot]: s[slot]?._id === meal._id ? null : meal }));
+  // Pick (or un-pick) a meal; after a pick, move on to the next slot that is still empty
+  const choose = (meal) => {
+    const removing = selected[slot]?._id === meal._id;
+    const next = { ...selected, [slot]: removing ? null : meal };
+    setSelected(next);
+    if (!removing) {
+      const after = [...SLOTS.slice(SLOTS.indexOf(slot) + 1), ...SLOTS.slice(0, SLOTS.indexOf(slot))].find((s) => !next[s]);
+      if (after) { setSlot(after); window.scrollTo({ top: 0, behavior: 'smooth' }); }
+    }
+  };
 
     const save = async () => {
     setSaving(true);
@@ -117,6 +126,10 @@ export default function MealPlanner() {
         <input type="date" value={date} min={today} max={maxDate}
           onChange={(e) => e.target.value && setDate(e.target.value)} />
       </div>
+
+      <DaySuggestions url="/meals/full-day" params={{ dietType, cuisine, date, seed: APP_SEED }} appliedIds={Object.values(selected).filter(Boolean).map((m) => m._id)} reloadKey={0} onApply={(items) => { setSelected(Object.fromEntries(items.map((i) => [i.stepId, i.meal]))); window.scrollTo({ top: 0, behavior: 'smooth' }); }} />
+
+      <PickedSummary items={SLOTS.map((k) => ({ key: k, label: k[0].toUpperCase() + k.slice(1), name: selected[k]?.name }))} />
 
       <NutritionSummary targets={info?.daily.targets} eaten={info?.daily.eaten} />
 
@@ -163,11 +176,7 @@ export default function MealPlanner() {
       ) : meals.length === 0 && !error ? (
         <p className="center-note">No meals found for this choice yet.</p>
       ) : (
-        <div className="stack" style={{ opacity: loading ? 0.6 : 1 }}>
-          {meals.map((meal) => (
-            <MealCard key={meal._id} meal={meal} selected={selected[slot]?._id === meal._id} onSelect={choose} />
-          ))}
-        </div>
+        <MealPicker ageTable meals={meals} total={info?.total || 0} fetchMore={(extra) => api.get('/meals/recommendations', { params: { mealType: slot, dietType, cuisine, date, seed: APP_SEED, ...(breakfastId ? { breakfastId } : {}), ...(lunchId ? { lunchId } : {}), ...(dinnerId ? { dinnerId } : {}), ...extra } }).then((r) => r.data)} loading={loading} selectedId={selected[slot]?._id} onSelect={choose} resetKey={`${slot}|${dietType}|${cuisine}|${date}`} />
       )}
 
       {message && <p className="success-text center">{message}</p>}

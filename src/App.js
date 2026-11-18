@@ -16,6 +16,8 @@ import IndividualOnboarding from './pages/IndividualOnboarding';
 import Terms from './pages/Terms';
 import Privacy from './pages/Privacy';
 import Help from './pages/Help';
+import Disclaimer from './pages/Disclaimer';
+import RefundPolicy from './pages/RefundPolicy';
 
 export default function App() {
   return (
@@ -27,6 +29,8 @@ export default function App() {
           <Route path="/terms" element={<Terms />} />
           <Route path="/privacy" element={<Privacy />} />
           <Route path="/help" element={<Help />} />
+          <Route path="/disclaimer" element={<Disclaimer />} />
+          <Route path="/refund-policy" element={<RefundPolicy />} />
           <Route element={<ProtectedRoute />}>
             <Route element={<AppLayout />}>
               <Route path="/" element={<Home />} />

@@ -3,6 +3,7 @@ import { Link, Navigate, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { errorMessage } from '../api/client';
 import GoogleButton from '../components/GoogleButton';
+import LegalLinks from '../components/LegalLinks';
 import './Auth.css';
 
 export default function Login() {
@@ -35,7 +36,7 @@ export default function Login() {
       {busy && <p className="muted" style={{ textAlign: 'center' }}>Signing you in...</p>}
       {error && <p className="error-text" style={{ textAlign: 'center' }}>{error}</p>}
       <p className="muted legal">Using a new phone or computer? Log in with the same Google account. Only one device can be logged in at a time, so your other device will be logged out.</p>
-      <p className="muted legal"><Link to="/terms">Terms</Link> &middot; <Link to="/privacy">Privacy</Link> &middot; <Link to="/help">Help</Link></p>
+      <LegalLinks />
       <p className="switch">New here? <Link to="/register">Create an account</Link></p>
     </div>
   );

@@ -1,9 +1,12 @@
+import DaySuggestions from '../components/DaySuggestions';
 import { useEffect, useState } from 'react';
 import { APP_SEED } from '../utils/seed';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import api, { errorMessage } from '../api/client';
 import { todayKey, addDays } from '../utils/date';
-import MealCard from '../components/MealCard';
+import CheckinCard from '../components/CheckinCard';
+import MealPicker, { PickedSummary } from '../components/MealPicker';
+import AddonPicker from '../components/AddonPicker';
 import NutritionSummary from '../components/NutritionSummary';
 import TargetsEditor from '../components/TargetsEditor';
 import './MealPlanner.css';
@@ -25,8 +28,10 @@ export default function IndividualPlanner() {
   const [cuisine, setCuisine] = useState('All');
   const [cuisines, setCuisines] = useState(['All']);
   const [picks, setPicks] = useState({});
+  const [addons, setAddons] = useState([]); // single foods added after the meals: { mealId, name, target, targetLabel }
   const [hadSaved, setHadSaved] = useState(false);
   const [info, setInfo] = useState(null);
+  const [bump, setBump] = useState(0); // goes up after a weight check-in so the meals are fetched again
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [message, setMessage] = useState('');
@@ -50,13 +55,19 @@ export default function IndividualPlanner() {
   useEffect(() => {
     let cancelled = false;
     setPicks({});
+    setAddons([]);
     setHadSaved(false);
     api.get(`/individual/day/${date}`)
       .then(({ data }) => {
         if (cancelled || !data.plan) return;
         const loaded = {};
-        data.plan.items.forEach((i) => { loaded[i.stepId] = { _id: i.mealId, name: i.mealName }; });
+        const extras = [];
+        data.plan.items.forEach((i) => {
+          if (i.addon) extras.push({ mealId: i.mealId, name: i.mealName, target: i.addedTo, targetLabel: i.label });
+          else loaded[i.stepId] = { _id: i.mealId, name: i.mealName };
+        });
         setPicks(loaded);
+        setAddons(extras);
         setHadSaved(true);
       })
       .catch(() => {});
@@ -74,9 +85,21 @@ export default function IndividualPlanner() {
       .finally(() => { if (!cancelled) setLoading(false); });
     return () => { cancelled = true; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [meta !== null, stepId, dietType, cuisine, date, picksParam, targetKey]);
+  }, [meta !== null, stepId, dietType, cuisine, date, picksParam, targetKey, bump]);
 
-  const choose = (meal) => setPicks((p) => ({ ...p, [stepId]: p[stepId]?._id === meal._id ? null : meal }));
+  // Pick (or un-pick) a meal; after a pick, move on to the next step that is still empty
+  const choose = (meal) => {
+    const removing = picks[stepId]?._id === meal._id;
+    const next = { ...picks, [stepId]: removing ? null : meal };
+    setPicks(next);
+    if (removing) setAddons((a) => a.map((x) => (x.target === stepId ? { ...x, target: 'extra', targetLabel: 'Extra snack' } : x)));
+    if (!removing) {
+      const ids = meta.steps.map((x) => x.id);
+      const i = ids.indexOf(stepId);
+      const after = [...ids.slice(i + 1), ...ids.slice(0, i)].find((id) => !next[id]);
+      if (after) { setStepId(after); window.scrollTo({ top: 0, behavior: 'smooth' }); }
+    }
+  };
 
   const save = async () => {
     setSaving(true);
@@ -84,7 +107,7 @@ export default function IndividualPlanner() {
     setError('');
     try {
       const body = Object.fromEntries(Object.entries(picks).filter(([, m]) => m).map(([k, m]) => [k, m._id]));
-      await api.put(`/individual/day/${date}`, { picks: body });
+      await api.put(`/individual/day/${date}`, { picks: body, addons: addons.map((a) => ({ mealId: a.mealId, target: a.target })) });
       setHadSaved(Object.keys(body).length > 0);
       setMessage(Object.keys(body).length ? `✓ Plan saved for ${date}` : `Plan cleared for ${date}`);
       setTimeout(() => setMessage(''), 4000);
@@ -112,6 +135,12 @@ export default function IndividualPlanner() {
         <label className="muted">Planning for</label>
         <input type="date" value={date} min={today} max={maxDate} onChange={(e) => e.target.value && setDate(e.target.value)} />
       </div>
+
+      <CheckinCard base="/individual" checkin={meta.checkin} weightKg={meta.profile.weightKg} onDone={(data) => { setMeta((m) => ({ ...m, ...data })); setBump((n) => n + 1); }} />
+
+      <DaySuggestions url="/individual/full-day" params={{ dietType, cuisine, date, seed: APP_SEED }} appliedIds={Object.values(picks).filter(Boolean).map((m) => m._id)} reloadKey={bump} onApply={(items) => { setPicks(Object.fromEntries(items.map((i) => [i.stepId, i.meal]))); window.scrollTo({ top: 0, behavior: 'smooth' }); }} />
+
+      <PickedSummary items={meta.steps.map((x) => ({ key: x.id, label: x.label, name: picks[x.id]?.name })).concat(addons.map((a) => ({ key: `add-${a.mealId}`, label: `+ ${a.targetLabel}`, name: a.name })))} />
 
       <NutritionSummary targets={info?.daily.targets || meta.targets} eaten={info?.daily.eaten || ZERO} />
 
@@ -150,10 +179,10 @@ export default function IndividualPlanner() {
       {loading && meals.length === 0 ? <p className="center-note">Finding the best meals for you...</p>
         : meals.length === 0 && !error ? <p className="center-note">No safe meals found for this choice yet.</p>
         : (
-          <div className="stack" style={{ opacity: loading ? 0.6 : 1 }}>
-            {meals.map((m) => <MealCard key={m._id} meal={m} selected={picks[stepId]?._id === m._id} onSelect={choose} />)}
-          </div>
+          <MealPicker meals={meals} total={info?.total || 0} fetchMore={(extra) => api.get('/individual/recommendations', { params: { ...{ stepId, dietType, cuisine, date, picks: picksParam, seed: APP_SEED }, ...extra } }).then((r) => r.data)} loading={loading} selectedId={picks[stepId]?._id} onSelect={choose} resetKey={`${stepId}|${dietType}|${cuisine}|${date}`} />
         )}
+
+      <AddonPicker plan="individual" date={date} dietType={dietType} picksParam={picksParam} addons={addons} setAddons={setAddons} />
 
       <p className="muted">
         {conditions.length > 0 && `You told us about ${conditions.join(', ')}. We rank meals that suit this higher. `}

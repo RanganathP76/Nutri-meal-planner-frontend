@@ -3,18 +3,20 @@ import { Link } from 'react-router-dom';
 import api, { errorMessage } from '../api/client';
 import TargetsEditor from '../components/TargetsEditor';
 import MicroTargets from '../components/MicroTargets';
+import CheckinCard from '../components/CheckinCard';
+import SafetyQuestions from '../components/SafetyQuestions';
 import { GoalAndTarget, BodySummary } from '../components/BodyGoal';
 import { DISEASES, toggleCondition } from '../utils/health';
 import './GymOnboarding.css';
 
 const BLANK = {
-  gender: '', age: '', heightCm: '', weightKg: '', targetWeightKg: '', activityLevel: 'light', goal: 'maintain', dietType: 'vegetarian',
+  gender: '', age: '', dateOfBirth: '', pregnancyBreastfeeding: '', allergies: [], otherAllergies: '', heightCm: '', weightKg: '', targetWeightKg: '', activityLevel: 'light', goal: 'maintain', dietType: 'vegetarian',
   healthConditions: [], acceptedNotice: false
 };
 const s = (v) => (v == null ? '' : String(v));
 
 const fromProfile = (p) => ({
-  ...BLANK, gender: p.gender, age: s(p.age), heightCm: s(p.heightCm), weightKg: s(p.weightKg), targetWeightKg: s(p.targetWeightKg),
+  ...BLANK, gender: p.gender, age: s(p.age), dateOfBirth: p.dateOfBirth || '', pregnancyBreastfeeding: p.pregnancyBreastfeeding === 'no' ? 'no' : '', allergies: p.allergies || [], otherAllergies: p.otherAllergies || '', heightCm: s(p.heightCm), weightKg: s(p.weightKg), targetWeightKg: s(p.targetWeightKg),
   activityLevel: p.activityLevel, goal: p.goal, dietType: p.dietType, healthConditions: p.healthConditions || [],
   acceptedNotice: false
 });
@@ -38,7 +40,7 @@ export default function IndividualOnboarding() {
   const [message, setMessage] = useState('');
   const [busy, setBusy] = useState(false);
   const set = (patch) => setF((o) => ({ ...o, ...patch }));
-  const aboutDone = Boolean(f.gender && f.age && f.heightCm && f.weightKg && f.activityLevel);
+  const aboutDone = Boolean(f.gender && f.dateOfBirth && f.heightCm && f.weightKg && f.activityLevel);
 
   useEffect(() => {
     api.get('/individual/profile')
@@ -81,6 +83,8 @@ export default function IndividualOnboarding() {
       {result && (
         <>
           {message && <p className="success-text">{message}</p>}
+          {result.goalNote && <p className="card success-text">{result.goalNote}</p>}
+          <CheckinCard always base="/individual" checkin={result.checkin} weightKg={result.profile.weightKg} onDone={(data) => { setResult((r) => ({ ...r, ...data })); setF((o) => ({ ...o, weightKg: String(data.profile.weightKg), goal: data.profile.goal })); }} />
           <BodySummary body={result.body} base="/individual" onChanged={(data) => setResult((r) => ({ ...r, ...data }))} />
           <TargetsEditor details={result.details} base="/individual" onChanged={(data) => setResult((r) => ({ ...r, ...data }))} />
           <MicroTargets micro={result.micro} />
@@ -93,7 +97,7 @@ export default function IndividualOnboarding() {
         <div className="card stack">
           <h4>About you</h4>
           <label>Gender{sel('gender', [['male', 'Male'], ['female', 'Female'], ['other', 'Other']])}</label>
-          <label>Age (18 to 75)<input type="number" min="18" max="75" required value={f.age} onChange={(e) => set({ age: e.target.value })} /></label>
+          <SafetyQuestions f={f} set={set} legacyAge={result?.profile && !result.profile.ageFromDob ? result.profile.age : null} />
           <label>Height (cm)<input type="number" min="120" max="230" required value={f.heightCm} onChange={(e) => set({ heightCm: e.target.value })} /></label>
           <label>Weight (kg)<input type="number" step="0.1" min="30" max="250" required value={f.weightKg} onChange={(e) => set({ weightKg: e.target.value })} /></label>
           <label>How active are you in a normal day?
@@ -115,9 +119,8 @@ export default function IndividualOnboarding() {
         <div className="card stack">
           <label className="tick notice">
             <input type="checkbox" checked={f.acceptedNotice} onChange={(e) => set({ acceptedNotice: e.target.checked })} />
-            I understand these are general nutrition suggestions, not medical advice. I will check my diet with a doctor or dietitian if I have a health condition.
+            <span>I have read and agree to the <Link to="/terms" target="_blank">Terms</Link>, <Link to="/privacy" target="_blank">Privacy Policy</Link> and <Link to="/disclaimer" target="_blank">Health Disclaimer</Link>. I understand all numbers are estimates, not medical advice.</span>
           </label>
-          <p className="muted">Meal ratings for health conditions are entered by our team. If a meal says it is not defined for your condition, check it once before you eat it.</p>
         </div>
 
         {error && <p className="error-text">{error}</p>}

@@ -230,3 +230,18 @@ export function toggleCondition(list, key) {
   const partner = EXCLUSIVE_GROUPS.find((g) => g.includes(key))?.find((k) => k !== key);
   return [...list.filter((x) => x !== partner), key];
 }
+
+// Same rule as the server: the goal follows the target weight. Returns { goal, note } (note only if the goal changed)
+export function reconcileGoal(goal, weightKg, targetWeightKg, margin = 3) {
+  const w = Number(weightKg);
+  const t = Number(targetWeightKg);
+  if (targetWeightKg === '' || !Number.isFinite(t) || !Number.isFinite(w)) return { goal };
+  const diff = t - w;
+  let next = goal;
+  if (diff <= -1) { if (!(goal === 'weight_loss' || (goal === 'recomp' && diff >= -margin))) next = 'weight_loss'; }
+  else if (diff >= 1) { if (!(goal === 'weight_gain' || ((goal === 'muscle_gain' || goal === 'recomp') && diff <= margin))) next = 'weight_gain'; }
+  else if (goal === 'weight_loss' || goal === 'weight_gain') next = 'maintain';
+  if (next === goal) return { goal };
+  const label = (GOALS.find(([k]) => k === next) || [])[1] || next;
+  return { goal: next, note: `Your target (${t} kg) does not match your weight (${w} kg), so we changed your goal to "${label}".` };
+}

@@ -1,4 +1,5 @@
 import { Link, useNavigate } from 'react-router-dom';
+import LegalLinks from '../components/LegalLinks';
 import { useAuth } from '../context/AuthContext';
 import { PLAN_NAMES } from '../utils/plans';
 import './Account.css';
@@ -43,7 +44,7 @@ export default function Account() {
         {plan?.isActive && plan.planType === 'individual' && <Link to="/individual/setup" className="btn btn-light">My profile and daily targets</Link>}
       </div>
 
-      <p className="muted"><Link to="/help">Help</Link> &middot; <Link to="/terms">Terms</Link> &middot; <Link to="/privacy">Privacy Policy</Link></p>
+      <LegalLinks />
       <button className="btn btn-danger" onClick={handleLogout}>Log out</button>
     </div>
   );

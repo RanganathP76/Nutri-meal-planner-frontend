@@ -1,0 +1,23 @@
+.picker { display: grid; gap: 10px; }
+.picker-search { display: flex; gap: 8px; align-items: center; }
+.picker-search input { flex: 1; }
+.picker-head { display: flex; justify-content: space-between; align-items: baseline; }
+/* The buttons stay in view above the bottom menu while the customer scrolls the 3 meals */
+.picker-bar { position: sticky; bottom: 72px; display: flex; gap: 8px; padding: 8px; background: rgba(255,255,255,.96); border: 1px solid var(--border); border-radius: 12px; box-shadow: 0 2px 10px rgba(0,0,0,.08); z-index: 5; }
+.picker-bar .btn { flex: 1; }
+.picked { display: grid; gap: 4px; font-size: 14px; }
+.picked-row { display: flex; justify-content: space-between; gap: 10px; }
+.picked-row span:last-child { text-align: right; font-weight: 600; }
+.plate { background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 10px; padding: 8px 10px; font-size: 14px; }
+.plate strong { display: block; margin-bottom: 2px; }
+.mains { display: flex; flex-wrap: wrap; gap: 4px; }
+.mains span { font-size: 11px; padding: 2px 8px; border-radius: 999px; background: #eef2ff; color: #3730a3; text-transform: capitalize; }
+.addon-card { border: 1px solid var(--border); border-radius: 12px; padding: 10px; display: grid; gap: 6px; }
+.addon-card.chosen { border-color: #16a34a; background: #f0fdf4; }
+.radio-row { display: block; padding: 4px 0; }
+.age-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.age-table td, .age-table th { padding: 4px 6px; border-bottom: 1px solid var(--border); text-align: left; vertical-align: top; }
+.age-table tr.yours { background: #ecfdf5; font-weight: 600; }
+.engine-table { width: 100%; font-size: 13px; border-collapse: collapse; }
+.engine-table td { padding: 3px 6px; border-bottom: 1px solid var(--border); }
+.engine-table td:last-child { text-align: right; }
