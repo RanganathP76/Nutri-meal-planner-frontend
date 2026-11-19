@@ -9,7 +9,7 @@ import './MealPicker.css';
 //  resetKey   changes when the slot, diet, cuisine or date changes, so we start again at the top 3
 const SIZE = 3;
 
-export default function MealPicker({ meals, total = 0, fetchMore, loading, selectedId, onSelect, resetKey, ageTable = false }) {
+export default function MealPicker({ meals, total = 0, fetchMore, loading, selectedId, onSelect, resetKey, ageTable = false, canAddon = false }) {
   const [pages, setPages] = useState([]); // pages of meals already received, oldest first
   const [at, setAt] = useState(0);
   const [more, setMore] = useState(false);
@@ -68,7 +68,7 @@ export default function MealPicker({ meals, total = 0, fetchMore, loading, selec
       {term ? (
         <div className="stack">
           <p className="muted">{searching || !found ? 'Searching...' : found.matches ? `${found.matches} meal${found.matches === 1 ? '' : 's'} found for "${term}"${found.matches > found.meals.length ? ` (showing the best ${found.meals.length}, try a longer word to narrow it)` : ''}` : `No meal found for "${term}". Try another word.`}</p>
-          {(found?.meals || []).map((m) => <MealCard key={m._id} meal={m} selected={selectedId === m._id} onSelect={onSelect} ageTable={ageTable} />)}
+          {(found?.meals || []).map((m) => <MealCard key={m._id} meal={m} selected={selectedId === m._id} onSelect={onSelect} ageTable={ageTable} canAddon={canAddon} />)}
         </div>
       ) : (
         <div className="stack" style={{ opacity: loading || more ? 0.6 : 1 }}>
@@ -76,7 +76,7 @@ export default function MealPicker({ meals, total = 0, fetchMore, loading, selec
             <strong>{at === 0 ? 'Top picks for you' : `More ideas (set ${at + 1})`}</strong>
             <span className="muted">{Math.min(seen.length, total)} of {total} seen</span>
           </div>
-          {current.map((m) => <MealCard key={m._id} meal={m} selected={selectedId === m._id} onSelect={onSelect} ageTable={ageTable} />)}
+          {current.map((m) => <MealCard key={m._id} meal={m} selected={selectedId === m._id} onSelect={onSelect} ageTable={ageTable} canAddon={canAddon} />)}
           <div className="picker-bar">
             <button type="button" className="btn btn-light" onClick={() => setAt(at - 1)} disabled={at === 0}>&larr; Previous {SIZE}</button>
             <button type="button" className="btn btn-primary" onClick={showOther} disabled={more || total <= SIZE}>

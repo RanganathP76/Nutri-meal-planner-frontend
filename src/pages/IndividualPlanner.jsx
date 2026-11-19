@@ -88,11 +88,13 @@ export default function IndividualPlanner() {
   }, [meta !== null, stepId, dietType, cuisine, date, picksParam, targetKey, bump]);
 
   // Pick (or un-pick) a meal; after a pick, move on to the next step that is still empty
-  const choose = (meal) => {
+  const choose = (meal, addon) => {
     const removing = picks[stepId]?._id === meal._id;
     const next = { ...picks, [stepId]: removing ? null : meal };
     setPicks(next);
     if (removing) setAddons((a) => a.map((x) => (x.target === stepId ? { ...x, target: 'extra', targetLabel: 'Extra snack' } : x)));
+    // "Select meal with this add-on": the add-on goes into this step
+    if (!removing && addon?.meal) setAddons((a) => [...a.filter((x) => x.mealId !== addon.meal._id), { mealId: addon.meal._id, name: addon.meal.name, target: stepId, targetLabel: `Added to ${meta.steps.find((x) => x.id === stepId)?.label || 'this meal'}` }]);
     if (!removing) {
       const ids = meta.steps.map((x) => x.id);
       const i = ids.indexOf(stepId);
@@ -138,7 +140,7 @@ export default function IndividualPlanner() {
 
       <CheckinCard base="/individual" checkin={meta.checkin} weightKg={meta.profile.weightKg} onDone={(data) => { setMeta((m) => ({ ...m, ...data })); setBump((n) => n + 1); }} />
 
-      <DaySuggestions url="/individual/full-day" params={{ dietType, cuisine, date, seed: APP_SEED }} appliedIds={Object.values(picks).filter(Boolean).map((m) => m._id)} reloadKey={bump} onApply={(items) => { setPicks(Object.fromEntries(items.map((i) => [i.stepId, i.meal]))); window.scrollTo({ top: 0, behavior: 'smooth' }); }} />
+      <DaySuggestions onAddon={(a) => setAddons((list) => [...list.filter((x) => x.mealId !== a._id), { mealId: a._id, name: a.name, target: a.addon.bestTarget, targetLabel: a.addon.bestTarget === 'extra' ? 'Extra snack' : `Added to ${meta.steps.find((x) => x.id === a.addon.bestTarget)?.label || 'a meal'}` }])} addedIds={addons.map((x) => x.mealId)} url="/individual/full-day" params={{ dietType, cuisine, date, seed: APP_SEED }} appliedIds={Object.values(picks).filter(Boolean).map((m) => m._id)} reloadKey={bump} onApply={(items) => { setPicks(Object.fromEntries(items.map((i) => [i.stepId, i.meal]))); window.scrollTo({ top: 0, behavior: 'smooth' }); }} />
 
       <PickedSummary items={meta.steps.map((x) => ({ key: x.id, label: x.label, name: picks[x.id]?.name })).concat(addons.map((a) => ({ key: `add-${a.mealId}`, label: `+ ${a.targetLabel}`, name: a.name })))} />
 
@@ -179,7 +181,7 @@ export default function IndividualPlanner() {
       {loading && meals.length === 0 ? <p className="center-note">Finding the best meals for you...</p>
         : meals.length === 0 && !error ? <p className="center-note">No safe meals found for this choice yet.</p>
         : (
-          <MealPicker meals={meals} total={info?.total || 0} fetchMore={(extra) => api.get('/individual/recommendations', { params: { ...{ stepId, dietType, cuisine, date, picks: picksParam, seed: APP_SEED }, ...extra } }).then((r) => r.data)} loading={loading} selectedId={picks[stepId]?._id} onSelect={choose} resetKey={`${stepId}|${dietType}|${cuisine}|${date}`} />
+          <MealPicker canAddon meals={meals} total={info?.total || 0} fetchMore={(extra) => api.get('/individual/recommendations', { params: { ...{ stepId, dietType, cuisine, date, picks: picksParam, seed: APP_SEED }, ...extra } }).then((r) => r.data)} loading={loading} selectedId={picks[stepId]?._id} onSelect={choose} resetKey={`${stepId}|${dietType}|${cuisine}|${date}`} />
         )}
 
       <AddonPicker plan="individual" date={date} dietType={dietType} picksParam={picksParam} addons={addons} setAddons={setAddons} />

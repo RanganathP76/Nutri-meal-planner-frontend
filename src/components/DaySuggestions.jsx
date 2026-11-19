@@ -7,7 +7,7 @@ import './MealPicker.css';
 //  params    diet, cuisine, date, seed (anything that changes the suggestions)
 //  onApply   (items) => each { stepId, meal } to put in the plan
 //  appliedIds  meal ids now in the plan (to show "In your plan")
-export default function DaySuggestions({ url, params, onApply, appliedIds = [], reloadKey = 0 }) {
+export default function DaySuggestions({ url, params, onApply, appliedIds = [], reloadKey = 0, onAddon, addedIds = [] }) {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -44,6 +44,16 @@ export default function DaySuggestions({ url, params, onApply, appliedIds = [], 
           {days.length > 1 && (
             <div className="tabs">
               {days.map((d, i) => <button key={d.id} type="button" className={`btn btn-sm ${i === at ? 'btn-primary' : 'btn-light'}`} onClick={() => setAt(i)}>{d.label}</button>)}
+            </div>
+          )}
+          {day.addon && (
+            <div className="addon-box addon-top">
+              <strong>+ Add-on for this day: {day.addon.name}</strong>
+              <p className="muted">{day.addon.addon.reason}</p>
+              {day.addon.portionText && <p className="muted">{day.addon.portionText}</p>}
+              {onAddon && (addedIds.includes(day.addon._id)
+                ? <span className="tag tag-green">✓ Added to your plan</span>
+                : <button type="button" className="btn btn-light btn-sm" onClick={() => onAddon(day.addon)}>Add this to my day</button>)}
             </div>
           )}
           <div className="stack">

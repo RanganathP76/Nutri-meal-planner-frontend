@@ -1,0 +1,430 @@
+From 79d419a26845bddcad3b4243406e4adb5e26d4d8 Mon Sep 17 00:00:00 2001
+From: Claude <noreply@anthropic.com>
+Date: Wed, 18 Nov 2026 21:09:23 +0000
+Subject: [PATCH] Step 26: Basic portion tables, rounded portions, add-ons,
+ meal approval, offers and coupons
+
+Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>
+Claude-Session: https://claude.ai/code/session_0162ttsE3gyaqmSryTCPtJRu
+---
+ src/components/DaySuggestions.jsx | 12 +++-
+ src/components/MealCard.jsx       | 93 ++++++++++++++++++++++---------
+ src/components/MealPicker.css     |  7 +++
+ src/components/MealPicker.jsx     |  6 +-
+ src/pages/GymPlanner.jsx          |  8 ++-
+ src/pages/IndividualPlanner.jsx   |  8 ++-
+ src/pages/Plans.css               |  7 ++-
+ src/pages/Plans.jsx               | 59 ++++++++++++++++++--
+ 8 files changed, 159 insertions(+), 41 deletions(-)
+
+diff --git a/src/components/DaySuggestions.jsx b/src/components/DaySuggestions.jsx
+index 211983c..5f19c3f 100644
+--- a/src/components/DaySuggestions.jsx
++++ b/src/components/DaySuggestions.jsx
+@@ -7,7 +7,7 @@ import './MealPicker.css';
+ //  params    diet, cuisine, date, seed (anything that changes the suggestions)
+ //  onApply   (items) => each { stepId, meal } to put in the plan
+ //  appliedIds  meal ids now in the plan (to show "In your plan")
+-export default function DaySuggestions({ url, params, onApply, appliedIds = [], reloadKey = 0 }) {
++export default function DaySuggestions({ url, params, onApply, appliedIds = [], reloadKey = 0, onAddon, addedIds = [] }) {
+   const [data, setData] = useState(null);
+   const [loading, setLoading] = useState(true);
+   const [error, setError] = useState('');
+@@ -46,6 +46,16 @@ export default function DaySuggestions({ url, params, onApply, appliedIds = [],
+               {days.map((d, i) => <button key={d.id} type="button" className={`btn btn-sm ${i === at ? 'btn-primary' : 'btn-light'}`} onClick={() => setAt(i)}>{d.label}</button>)}
+             </div>
+           )}
++          {day.addon && (
++            <div className="addon-box addon-top">
++              <strong>+ Add-on for this day: {day.addon.name}</strong>
++              <p className="muted">{day.addon.addon.reason}</p>
++              {day.addon.portionText && <p className="muted">{day.addon.portionText}</p>}
++              {onAddon && (addedIds.includes(day.addon._id)
++                ? <span className="tag tag-green">✓ Added to your plan</span>
++                : <button type="button" className="btn btn-light btn-sm" onClick={() => onAddon(day.addon)}>Add this to my day</button>)}
++            </div>
++          )}
+           <div className="stack">
+             {day.items.map((i) => (
+               <div key={i.stepId} className="picked-row">
+diff --git a/src/components/MealCard.jsx b/src/components/MealCard.jsx
+index 31c1f80..81972ad 100644
+--- a/src/components/MealCard.jsx
++++ b/src/components/MealCard.jsx
+@@ -5,34 +5,75 @@ import { useState } from 'react';
+ import api, { errorMessage } from '../api/client';
+ import { DISEASE_LABEL, NUTRIENT_GROUPS, NUTRIENT_GROUP_TITLES } from '../utils/health';
+ 
+-// Basic plan: the same meal for every age group (loaded when the customer opens it)
++// Basic plan: portions are NOT shown on the card. The customer taps "See portions by age" and gets two tables,
++// one for boys and men and one for girls and women. Loaded only when opened.
+ function AgePortions({ mealId }) {
++  const [open, setOpen] = useState(false);
+   const [data, setData] = useState(null);
+   const [error, setError] = useState('');
+-  const load = (e) => {
+-    if (!e.target.open || data) return;
+-    api.get('/meals/age-portions', { params: { mealId } }).then((r) => setData(r.data)).catch((err) => setError(errorMessage(err)));
++  const [sex, setSex] = useState('male');
++  const toggle = () => {
++    const next = !open;
++    setOpen(next);
++    if (next && !data) api.get('/meals/age-portions', { params: { mealId } }).then((r) => setData(r.data)).catch((err) => setError(errorMessage(err)));
+   };
++  const rows = data ? data[sex] : [];
+   return (
+-    <details className="meal-more" onToggle={load}>
+-      <summary>Portion for every age group</summary>
+-      {error && <p className="error-text">{error}</p>}
+-      {!data && !error && <p className="muted">Loading...</p>}
+-      {data && (
+-        <>
+-          <table className="age-table"><thead><tr><th>Age group</th><th>On the plate</th><th>kcal</th></tr></thead><tbody>
+-            {data.bands.map((b) => (
+-              <tr key={b.id} className={b.isYours ? 'yours' : ''}>
+-                <td>{b.ageFrom}{b.ageTo ? `–${b.ageTo}` : '+'} yrs{b.isYours ? ' (you)' : ''}<br /><span className="muted">{b.weightKg} kg, {b.heightCm} cm</span></td>
+-                <td>{b.portionText}</td>
+-                <td>{Math.round(b.nutrition.calories)}</td>
+-              </tr>
+-            ))}
+-          </tbody></table>
+-          <p className="muted">{data.note}</p>
+-        </>
++    <div className="age-portions">
++      <button type="button" className="btn btn-light" onClick={toggle}>{open ? 'Hide portions' : 'See portions by age'}</button>
++      {open && (
++        <div className="stack" style={{ marginTop: 8 }}>
++          {error && <p className="error-text">{error}</p>}
++          {!data && !error && <p className="muted">Loading...</p>}
++          {data && (
++            <>
++              <div className="chip-row">
++                <button type="button" className={`chip small ${sex === 'male' ? 'on' : ''}`} onClick={() => setSex('male')}>Boys and men</button>
++                <button type="button" className={`chip small ${sex === 'female' ? 'on' : ''}`} onClick={() => setSex('female')}>Girls and women</button>
++              </div>
++              <table className="age-table"><thead><tr><th>Age</th><th>What to serve</th><th>kcal</th></tr></thead><tbody>
++                {rows.map((b) => (
++                  <tr key={b.id}>
++                    <td>{b.ageFrom}{b.ageTo ? `–${b.ageTo}` : '+'} years</td>
++                    <td>{b.portionText}</td>
++                    <td>{b.nutrition.calories}</td>
++                  </tr>
++                ))}
++              </tbody></table>
++              <p className="muted">{data.note}</p>
++            </>
++          )}
++        </div>
+       )}
+-    </details>
++    </div>
++  );
++}
++
++// "Good for diabetes" / "Not good for diabetes" (Basic plan)
++function HealthLabels({ labels }) {
++  if (!labels?.length) return null;
++  return (
++    <div className="health-labels">
++      {labels.map((l) => (
++        <span key={l.disease} className={`tag ${l.verdict === 'good' ? 'tag-green' : 'tag-red'}`} title={[l.strength, l.reason].filter(Boolean).join(': ')}>
++          {l.verdict === 'good' ? '✓' : '✕'} {l.text}
++        </span>
++      ))}
++    </div>
++  );
++}
++
++// A small food that completes this meal (it is low in something the slot needs)
++function AddonBox({ addon, onTake }) {
++  const m = addon.meal;
++  return (
++    <div className="addon-box">
++      <strong>+ Add-on: {m.name}</strong>
++      <p className="muted">{addon.reason}</p>
++      {m.portionText && <p className="muted">{m.portionText}</p>}
++      <p className="muted">Together: {Math.round(addon.combined.calories)} kcal, {addon.combined.protein} g protein, {addon.combined.fiber} g fibre.</p>
++      {onTake && <button type="button" className="btn btn-light btn-sm" onClick={onTake}>Select meal with this add-on</button>}
++    </div>
+   );
+ }
+ 
+@@ -59,7 +100,7 @@ function ScoreDetails({ d }) {
+   );
+ }
+ 
+-export default function MealCard({ meal, selected, onSelect, ageTable = false }) {
++export default function MealCard({ meal, selected, onSelect, ageTable = false, canAddon = false }) {
+   const n = meal.nutritionPerServing || {};
+   const rec = meal.recommendation;
+   return (
+@@ -75,6 +116,7 @@ export default function MealCard({ meal, selected, onSelect, ageTable = false })
+           <span className="tag tag-green">{meal.digestiveProfile?.digestiveLoad} to digest</span>
+           {meal.madeInLast3Days && <span className="tag tag-amber">Made in the last 3 days</span>}
+         </div>
++        <HealthLabels labels={meal.healthLabels} />
+         {rec && <p className="reason">{rec.reason}</p>}
+         {meal.portion && meal.portion.percentChange !== 0 && (
+           <p className="portion-note">Portion adjusted for your age, goal, height and weight: {meal.portion.percentChange > 0 ? '+' : ''}{meal.portion.percentChange}% compared with {meal.portion.referenceLabel || `a ${meal.portion.referenceWeightKg} kg person`}.</p>
+@@ -107,17 +149,18 @@ export default function MealCard({ meal, selected, onSelect, ageTable = false })
+         {meal.components?.length > 0 && (
+           <div className="plate">
+             <strong>{meal.portion ? 'Your portion' : 'One serving'}</strong>
+-            {meal.portionText || meal.components.map((c) => `${c.quantity} ${c.unit === 'piece' ? '' : c.unit + ' '}${c.name.toLowerCase()}`).join(', ')}
++            {meal.portionText || meal.components.map((c) => `${c.quantityText ?? c.quantity} ${c.unit === 'piece' ? '' : c.unit + ' '}${c.name.toLowerCase()}`).join(', ')}
+             {meal.portion && <details className="meal-more"><summary>Compare with the reference person</summary>
+               <ul className="ing-list">
+                 {meal.components.map((c) => (
+-                  <li key={c.name}>{c.name}: {c.quantity} {c.unit} <span className="ref">({c.referenceQuantity} {c.unit} for {meal.portion.referenceLabel || `a ${meal.portion.referenceWeightKg} kg person`})</span></li>
++                  <li key={c.name}>{c.name}: {c.quantityText ?? c.quantity} {c.unit} <span className="ref">({c.referenceQuantity} {c.unit} for {meal.portion.referenceLabel || `a ${meal.portion.referenceWeightKg} kg person`})</span></li>
+                 ))}
+               </ul>
+               <p className="muted">Amounts are estimates, adjusted for your age, goal, height and weight.</p>
+             </details>}
+           </div>
+         )}
++        {meal.addon?.meal && <AddonBox addon={meal.addon} onTake={canAddon && !selected ? () => onSelect(meal, meal.addon) : null} />}
+         {meal.mainIngredients?.length > 0 && <div className="mains">{meal.mainIngredients.map((m) => <span key={m}>{m}</span>)}</div>}
+         {rec && (
+           <details className="meal-more">
+diff --git a/src/components/MealPicker.css b/src/components/MealPicker.css
+index a57c7de..347199c 100644
+--- a/src/components/MealPicker.css
++++ b/src/components/MealPicker.css
+@@ -21,3 +21,10 @@
+ .engine-table { width: 100%; font-size: 13px; border-collapse: collapse; }
+ .engine-table td { padding: 3px 6px; border-bottom: 1px solid var(--border); }
+ .engine-table td:last-child { text-align: right; }
++
++.age-table td:nth-child(2) { min-width: 120px; }
++.health-labels { display: flex; flex-wrap: wrap; gap: 4px; margin: 4px 0; }
++.tag-red { background: #fee2e2; color: #b91c1c; }
++.addon-box { background: #f0fdf4; border: 1px dashed #16a34a; border-radius: 10px; padding: 8px 10px; margin: 6px 0; }
++.addon-box p { margin: 2px 0; }
++.addon-top { background: #ecfeff; border-color: #0891b2; }
+diff --git a/src/components/MealPicker.jsx b/src/components/MealPicker.jsx
+index f971efd..28e18eb 100644
+--- a/src/components/MealPicker.jsx
++++ b/src/components/MealPicker.jsx
+@@ -9,7 +9,7 @@ import './MealPicker.css';
+ //  resetKey   changes when the slot, diet, cuisine or date changes, so we start again at the top 3
+ const SIZE = 3;
+ 
+-export default function MealPicker({ meals, total = 0, fetchMore, loading, selectedId, onSelect, resetKey, ageTable = false }) {
++export default function MealPicker({ meals, total = 0, fetchMore, loading, selectedId, onSelect, resetKey, ageTable = false, canAddon = false }) {
+   const [pages, setPages] = useState([]); // pages of meals already received, oldest first
+   const [at, setAt] = useState(0);
+   const [more, setMore] = useState(false);
+@@ -68,7 +68,7 @@ export default function MealPicker({ meals, total = 0, fetchMore, loading, selec
+       {term ? (
+         <div className="stack">
+           <p className="muted">{searching || !found ? 'Searching...' : found.matches ? `${found.matches} meal${found.matches === 1 ? '' : 's'} found for "${term}"${found.matches > found.meals.length ? ` (showing the best ${found.meals.length}, try a longer word to narrow it)` : ''}` : `No meal found for "${term}". Try another word.`}</p>
+-          {(found?.meals || []).map((m) => <MealCard key={m._id} meal={m} selected={selectedId === m._id} onSelect={onSelect} ageTable={ageTable} />)}
++          {(found?.meals || []).map((m) => <MealCard key={m._id} meal={m} selected={selectedId === m._id} onSelect={onSelect} ageTable={ageTable} canAddon={canAddon} />)}
+         </div>
+       ) : (
+         <div className="stack" style={{ opacity: loading || more ? 0.6 : 1 }}>
+@@ -76,7 +76,7 @@ export default function MealPicker({ meals, total = 0, fetchMore, loading, selec
+             <strong>{at === 0 ? 'Top picks for you' : `More ideas (set ${at + 1})`}</strong>
+             <span className="muted">{Math.min(seen.length, total)} of {total} seen</span>
+           </div>
+-          {current.map((m) => <MealCard key={m._id} meal={m} selected={selectedId === m._id} onSelect={onSelect} ageTable={ageTable} />)}
++          {current.map((m) => <MealCard key={m._id} meal={m} selected={selectedId === m._id} onSelect={onSelect} ageTable={ageTable} canAddon={canAddon} />)}
+           <div className="picker-bar">
+             <button type="button" className="btn btn-light" onClick={() => setAt(at - 1)} disabled={at === 0}>&larr; Previous {SIZE}</button>
+             <button type="button" className="btn btn-primary" onClick={showOther} disabled={more || total <= SIZE}>
+diff --git a/src/pages/GymPlanner.jsx b/src/pages/GymPlanner.jsx
+index 6ba93a3..1f0056f 100644
+--- a/src/pages/GymPlanner.jsx
++++ b/src/pages/GymPlanner.jsx
+@@ -86,11 +86,13 @@ export default function GymPlanner() {
+   }, [stepId, dietType, cuisine, date, picksParam, bump]);
+ 
+   // Pick (or un-pick) a meal; after a pick, move on to the next step that is still empty
+-  const choose = (meal) => {
++  const choose = (meal, addon) => {
+     const removing = picks[stepId]?._id === meal._id;
+     const next = { ...picks, [stepId]: removing ? null : meal };
+     setPicks(next);
+     if (removing) setAddons((a) => a.map((x) => (x.target === stepId ? { ...x, target: 'extra', targetLabel: 'Extra snack' } : x)));
++    // "Select meal with this add-on": the add-on goes into this step
++    if (!removing && addon?.meal) setAddons((a) => [...a.filter((x) => x.mealId !== addon.meal._id), { mealId: addon.meal._id, name: addon.meal.name, target: stepId, targetLabel: `Added to ${meta.steps.find((x) => x.id === stepId)?.label || 'this meal'}` }]);
+     if (!removing) {
+       const ids = meta.steps.map((x) => x.id);
+       const i = ids.indexOf(stepId);
+@@ -136,7 +138,7 @@ export default function GymPlanner() {
+ 
+       <CheckinCard base="/gym" checkin={meta.checkin} weightKg={meta.profile.weightKg} onDone={(data) => { setMeta((m) => ({ ...m, ...data })); setBump((n) => n + 1); }} />
+ 
+-      <DaySuggestions url="/gym/full-day" params={{ dietType, cuisine, date, seed: APP_SEED }} appliedIds={Object.values(picks).filter(Boolean).map((m) => m._id)} reloadKey={bump} onApply={(items) => { setPicks(Object.fromEntries(items.map((i) => [i.stepId, i.meal]))); window.scrollTo({ top: 0, behavior: 'smooth' }); }} />
++      <DaySuggestions onAddon={(a) => setAddons((list) => [...list.filter((x) => x.mealId !== a._id), { mealId: a._id, name: a.name, target: a.addon.bestTarget, targetLabel: a.addon.bestTarget === 'extra' ? 'Extra snack' : `Added to ${meta.steps.find((x) => x.id === a.addon.bestTarget)?.label || 'a meal'}` }])} addedIds={addons.map((x) => x.mealId)} url="/gym/full-day" params={{ dietType, cuisine, date, seed: APP_SEED }} appliedIds={Object.values(picks).filter(Boolean).map((m) => m._id)} reloadKey={bump} onApply={(items) => { setPicks(Object.fromEntries(items.map((i) => [i.stepId, i.meal]))); window.scrollTo({ top: 0, behavior: 'smooth' }); }} />
+ 
+       <PickedSummary items={meta.steps.map((x) => ({ key: x.id, label: x.label, name: picks[x.id]?.name })).concat(addons.map((a) => ({ key: `add-${a.mealId}`, label: `+ ${a.targetLabel}`, name: a.name })))} />
+ 
+@@ -170,7 +172,7 @@ export default function GymPlanner() {
+       {loading && meals.length === 0 ? <p className="center-note">Finding the best meals for you...</p>
+         : meals.length === 0 && !error ? <p className="center-note">No safe meals found for this choice yet.</p>
+         : (
+-          <MealPicker meals={meals} total={info?.total || 0} fetchMore={(extra) => api.get('/gym/recommendations', { params: { ...{ stepId, dietType, cuisine, date, picks: picksParam, seed: APP_SEED }, ...extra } }).then((r) => r.data)} loading={loading} selectedId={picks[stepId]?._id} onSelect={choose} resetKey={`${stepId}|${dietType}|${cuisine}|${date}`} />
++          <MealPicker canAddon meals={meals} total={info?.total || 0} fetchMore={(extra) => api.get('/gym/recommendations', { params: { ...{ stepId, dietType, cuisine, date, picks: picksParam, seed: APP_SEED }, ...extra } }).then((r) => r.data)} loading={loading} selectedId={picks[stepId]?._id} onSelect={choose} resetKey={`${stepId}|${dietType}|${cuisine}|${date}`} />
+         )}
+ 
+       <AddonPicker plan="gym" date={date} dietType={dietType} picksParam={picksParam} addons={addons} setAddons={setAddons} />
+diff --git a/src/pages/IndividualPlanner.jsx b/src/pages/IndividualPlanner.jsx
+index 4ec872e..6b78e6e 100644
+--- a/src/pages/IndividualPlanner.jsx
++++ b/src/pages/IndividualPlanner.jsx
+@@ -88,11 +88,13 @@ export default function IndividualPlanner() {
+   }, [meta !== null, stepId, dietType, cuisine, date, picksParam, targetKey, bump]);
+ 
+   // Pick (or un-pick) a meal; after a pick, move on to the next step that is still empty
+-  const choose = (meal) => {
++  const choose = (meal, addon) => {
+     const removing = picks[stepId]?._id === meal._id;
+     const next = { ...picks, [stepId]: removing ? null : meal };
+     setPicks(next);
+     if (removing) setAddons((a) => a.map((x) => (x.target === stepId ? { ...x, target: 'extra', targetLabel: 'Extra snack' } : x)));
++    // "Select meal with this add-on": the add-on goes into this step
++    if (!removing && addon?.meal) setAddons((a) => [...a.filter((x) => x.mealId !== addon.meal._id), { mealId: addon.meal._id, name: addon.meal.name, target: stepId, targetLabel: `Added to ${meta.steps.find((x) => x.id === stepId)?.label || 'this meal'}` }]);
+     if (!removing) {
+       const ids = meta.steps.map((x) => x.id);
+       const i = ids.indexOf(stepId);
+@@ -138,7 +140,7 @@ export default function IndividualPlanner() {
+ 
+       <CheckinCard base="/individual" checkin={meta.checkin} weightKg={meta.profile.weightKg} onDone={(data) => { setMeta((m) => ({ ...m, ...data })); setBump((n) => n + 1); }} />
+ 
+-      <DaySuggestions url="/individual/full-day" params={{ dietType, cuisine, date, seed: APP_SEED }} appliedIds={Object.values(picks).filter(Boolean).map((m) => m._id)} reloadKey={bump} onApply={(items) => { setPicks(Object.fromEntries(items.map((i) => [i.stepId, i.meal]))); window.scrollTo({ top: 0, behavior: 'smooth' }); }} />
++      <DaySuggestions onAddon={(a) => setAddons((list) => [...list.filter((x) => x.mealId !== a._id), { mealId: a._id, name: a.name, target: a.addon.bestTarget, targetLabel: a.addon.bestTarget === 'extra' ? 'Extra snack' : `Added to ${meta.steps.find((x) => x.id === a.addon.bestTarget)?.label || 'a meal'}` }])} addedIds={addons.map((x) => x.mealId)} url="/individual/full-day" params={{ dietType, cuisine, date, seed: APP_SEED }} appliedIds={Object.values(picks).filter(Boolean).map((m) => m._id)} reloadKey={bump} onApply={(items) => { setPicks(Object.fromEntries(items.map((i) => [i.stepId, i.meal]))); window.scrollTo({ top: 0, behavior: 'smooth' }); }} />
+ 
+       <PickedSummary items={meta.steps.map((x) => ({ key: x.id, label: x.label, name: picks[x.id]?.name })).concat(addons.map((a) => ({ key: `add-${a.mealId}`, label: `+ ${a.targetLabel}`, name: a.name })))} />
+ 
+@@ -179,7 +181,7 @@ export default function IndividualPlanner() {
+       {loading && meals.length === 0 ? <p className="center-note">Finding the best meals for you...</p>
+         : meals.length === 0 && !error ? <p className="center-note">No safe meals found for this choice yet.</p>
+         : (
+-          <MealPicker meals={meals} total={info?.total || 0} fetchMore={(extra) => api.get('/individual/recommendations', { params: { ...{ stepId, dietType, cuisine, date, picks: picksParam, seed: APP_SEED }, ...extra } }).then((r) => r.data)} loading={loading} selectedId={picks[stepId]?._id} onSelect={choose} resetKey={`${stepId}|${dietType}|${cuisine}|${date}`} />
++          <MealPicker canAddon meals={meals} total={info?.total || 0} fetchMore={(extra) => api.get('/individual/recommendations', { params: { ...{ stepId, dietType, cuisine, date, picks: picksParam, seed: APP_SEED }, ...extra } }).then((r) => r.data)} loading={loading} selectedId={picks[stepId]?._id} onSelect={choose} resetKey={`${stepId}|${dietType}|${cuisine}|${date}`} />
+         )}
+ 
+       <AddonPicker plan="individual" date={date} dietType={dietType} picksParam={picksParam} addons={addons} setAddons={setAddons} />
+diff --git a/src/pages/Plans.css b/src/pages/Plans.css
+index d81ff30..d59ed7e 100644
+--- a/src/pages/Plans.css
++++ b/src/pages/Plans.css
+@@ -5,4 +5,9 @@
+ .plan ul { margin: 0; padding-left: 18px; font-size: 13px; color: #4b5563; display: grid; gap: 2px; }
+ 
+ .pay-row { display: grid; gap: 4px; font-size: 13px; }
+-.pay-top { display: flex; justify-content: space-between; gap: 8px; align-items: center; }
+\ No newline at end of file
++.pay-top { display: flex; justify-content: space-between; gap: 8px; align-items: center; }
++.offers { background: #fffbeb; border: 1px solid #fcd34d; }
++.offer-row { display: flex; flex-direction: column; gap: 2px; }
++.offer-text { font-weight: 700; color: #92400e; }
++.coupon-row { display: flex; gap: 8px; align-items: center; }
++.coupon-row input { flex: 1; text-transform: uppercase; }
+diff --git a/src/pages/Plans.jsx b/src/pages/Plans.jsx
+index e74aa33..cc4f591 100644
+--- a/src/pages/Plans.jsx
++++ b/src/pages/Plans.jsx
+@@ -16,21 +16,38 @@ export default function Plans() {
+   const [history, setHistory] = useState([]);
+   const [error, setError] = useState('');
+   const [busyPlan, setBusyPlan] = useState('');
++  const [offers, setOffers] = useState([]);   // offers for everyone
++  const [coupons, setCoupons] = useState({}); // per plan: { code, result, error, busy }
+ 
+ 
+   const load = () => {
+-    api.get('/payments/plans').then((res) => setPlans(res.data.plans)).catch((err) => setError(errorMessage(err)));
++    api.get('/payments/plans').then((res) => { setPlans(res.data.plans); setOffers(res.data.offers || []); }).catch((err) => setError(errorMessage(err)));
+     api.get('/payments/mine').then((res) => setHistory(res.data.payments)).catch(() => {});
+   };
+   useEffect(load, []);
+ 
+   const current = user.activePlan?.isActive ? user.activePlan : null;
+ 
++  const setCoupon = (planType, patch) => setCoupons((c) => ({ ...c, [planType]: { ...(c[planType] || {}), ...patch } }));
++
++  // The server checks the code and works out the real price. Nothing is saved yet.
++  const applyCoupon = async (planType) => {
++    const code = (coupons[planType]?.code || '').trim();
++    if (!code) return;
++    setCoupon(planType, { busy: true, error: '', result: null });
++    try {
++      const { data } = await api.post('/payments/apply-coupon', { planType, code });
++      setCoupon(planType, { result: data, applied: code, busy: false });
++    } catch (err) {
++      setCoupon(planType, { error: errorMessage(err), busy: false });
++    }
++  };
++
+   const buy = async (planType) => {
+     setBusyPlan(planType);
+     setError('');
+     try {
+-      const { data } = await api.post('/payments/create-order', { planType });
++      const { data } = await api.post('/payments/create-order', { planType, code: coupons[planType]?.result ? coupons[planType].applied : undefined });
+       let failedReason = '';
+ 
+       const checkout = new window.Razorpay({
+@@ -103,21 +120,53 @@ export default function Plans() {
+ 
+             <p className="muted">Plans are non-refundable. Switching to a lower plan is free, and an upgrade costs only the difference.</p>
+ 
++      {offers.length > 0 && (
++        <div className="card stack offers">
++          <strong>🎁 Offers for you</strong>
++          {offers.map((o) => (
++            <div key={o.id} className="offer-row">
++              <span className="offer-text">{o.text}</span>
++              <span className="muted">{o.title}{o.description ? ` · ${o.description}` : ''}{o.endsAt ? ` · until ${new Date(o.endsAt).toLocaleDateString('en-IN')}` : ''}</span>
++            </div>
++          ))}
++          <p className="muted">These are added automatically when you pay. Have a coupon code? Enter it under the plan.</p>
++        </div>
++      )}
++
+       {plans.map((plan) => {
+         const isCurrent = current?.planType === plan.planType;
+-        const label = plan.action === 'upgrade' ? `Upgrade for ₹${plan.payRupees}`
+-          : plan.action === 'extend' ? `Extend for ₹${plan.payRupees}` : `Pay ₹${plan.payRupees}`;
++        const cp = coupons[plan.planType] || {};
++        const priced = cp.result || plan; // the coupon result, or the plan with offers for everyone
++        const pay = priced.payRupees;
++        const label = plan.action === 'upgrade' ? `Upgrade for ₹${pay}`
++          : plan.action === 'extend' ? `Extend for ₹${pay}` : `Pay ₹${pay}`;
++        const canCoupon = plan.action === 'buy' || plan.action === 'extend';
+         const endDate = current ? new Date(current.expiresAt).toLocaleDateString('en-IN') : '';
+         return (
+           <div key={plan.planType} className={`card plan ${isCurrent ? 'current' : ''}`}>
+             <div className="plan-head">
+               <h4>{plan.title}</h4>
+-              <strong>₹{plan.priceRupees}</strong>
++              <strong>
++                {canCoupon && priced.discountRupees > 0 && <s className="muted" style={{ marginRight: 6 }}>₹{plan.priceRupees}</s>}
++                ₹{canCoupon ? pay : plan.priceRupees}
++              </strong>
+             </div>
+             <span className="muted">Valid for {validityText(plan.validityDays)}</span>
++            {canCoupon && priced.bonusDays > 0 && <span className="tag tag-green">+ {validityText(priced.bonusDays)} free (total {validityText(priced.totalDays)})</span>}
++            {canCoupon && (cp.result ? cp.result.applied : plan.offers)?.length > 0 && (
++              <p className="muted">🎁 {(cp.result ? cp.result.applied.map((a) => a.text) : plan.offers).join(' · ')}</p>
++            )}
+             <p className="muted">{plan.description}</p>
+             <ul>{plan.features?.map((f) => <li key={f}>{f}</li>)}</ul>
+             {isCurrent && <span className="tag tag-green">Active until {endDate}</span>}
++            {canCoupon && (
++              <div className="coupon-row">
++                <input type="text" placeholder="Coupon code" value={cp.code || ''} maxLength={20} onChange={(e) => setCoupon(plan.planType, { code: e.target.value.toUpperCase(), result: null, error: '' })} />
++                <button type="button" className="btn btn-light btn-sm" disabled={cp.busy || !(cp.code || '').trim()} onClick={() => applyCoupon(plan.planType)}>{cp.busy ? 'Checking...' : 'Apply'}</button>
++              </div>
++            )}
++            {cp.error && <p className="error-text">{cp.error}</p>}
++            {cp.result && <p className="success-text">✓ Coupon applied. You pay ₹{cp.result.payRupees}.</p>}
+             {plan.action === 'upgrade' && (
+               <p className="muted">Pay only the difference (₹{plan.payRupees}). Your end date, {endDate}, stays the same.</p>
+             )}
+-- 
+2.43.0
+

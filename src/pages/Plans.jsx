@@ -16,21 +16,38 @@ export default function Plans() {
   const [history, setHistory] = useState([]);
   const [error, setError] = useState('');
   const [busyPlan, setBusyPlan] = useState('');
+  const [offers, setOffers] = useState([]);   // offers for everyone
+  const [coupons, setCoupons] = useState({}); // per plan: { code, result, error, busy }
 
 
   const load = () => {
-    api.get('/payments/plans').then((res) => setPlans(res.data.plans)).catch((err) => setError(errorMessage(err)));
+    api.get('/payments/plans').then((res) => { setPlans(res.data.plans); setOffers(res.data.offers || []); }).catch((err) => setError(errorMessage(err)));
     api.get('/payments/mine').then((res) => setHistory(res.data.payments)).catch(() => {});
   };
   useEffect(load, []);
 
   const current = user.activePlan?.isActive ? user.activePlan : null;
 
+  const setCoupon = (planType, patch) => setCoupons((c) => ({ ...c, [planType]: { ...(c[planType] || {}), ...patch } }));
+
+  // The server checks the code and works out the real price. Nothing is saved yet.
+  const applyCoupon = async (planType) => {
+    const code = (coupons[planType]?.code || '').trim();
+    if (!code) return;
+    setCoupon(planType, { busy: true, error: '', result: null });
+    try {
+      const { data } = await api.post('/payments/apply-coupon', { planType, code });
+      setCoupon(planType, { result: data, applied: code, busy: false });
+    } catch (err) {
+      setCoupon(planType, { error: errorMessage(err), busy: false });
+    }
+  };
+
   const buy = async (planType) => {
     setBusyPlan(planType);
     setError('');
     try {
-      const { data } = await api.post('/payments/create-order', { planType });
+      const { data } = await api.post('/payments/create-order', { planType, code: coupons[planType]?.result ? coupons[planType].applied : undefined });
       let failedReason = '';
 
       const checkout = new window.Razorpay({
@@ -103,21 +120,53 @@ export default function Plans() {
 
             <p className="muted">Plans are non-refundable. Switching to a lower plan is free, and an upgrade costs only the difference.</p>
 
+      {offers.length > 0 && (
+        <div className="card stack offers">
+          <strong>🎁 Offers for you</strong>
+          {offers.map((o) => (
+            <div key={o.id} className="offer-row">
+              <span className="offer-text">{o.text}</span>
+              <span className="muted">{o.title}{o.description ? ` · ${o.description}` : ''}{o.endsAt ? ` · until ${new Date(o.endsAt).toLocaleDateString('en-IN')}` : ''}</span>
+            </div>
+          ))}
+          <p className="muted">These are added automatically when you pay. Have a coupon code? Enter it under the plan.</p>
+        </div>
+      )}
+
       {plans.map((plan) => {
         const isCurrent = current?.planType === plan.planType;
-        const label = plan.action === 'upgrade' ? `Upgrade for ₹${plan.payRupees}`
-          : plan.action === 'extend' ? `Extend for ₹${plan.payRupees}` : `Pay ₹${plan.payRupees}`;
+        const cp = coupons[plan.planType] || {};
+        const priced = cp.result || plan; // the coupon result, or the plan with offers for everyone
+        const pay = priced.payRupees;
+        const label = plan.action === 'upgrade' ? `Upgrade for ₹${pay}`
+          : plan.action === 'extend' ? `Extend for ₹${pay}` : `Pay ₹${pay}`;
+        const canCoupon = plan.action === 'buy' || plan.action === 'extend';
         const endDate = current ? new Date(current.expiresAt).toLocaleDateString('en-IN') : '';
         return (
           <div key={plan.planType} className={`card plan ${isCurrent ? 'current' : ''}`}>
             <div className="plan-head">
               <h4>{plan.title}</h4>
-              <strong>₹{plan.priceRupees}</strong>
+              <strong>
+                {canCoupon && priced.discountRupees > 0 && <s className="muted" style={{ marginRight: 6 }}>₹{plan.priceRupees}</s>}
+                ₹{canCoupon ? pay : plan.priceRupees}
+              </strong>
             </div>
             <span className="muted">Valid for {validityText(plan.validityDays)}</span>
+            {canCoupon && priced.bonusDays > 0 && <span className="tag tag-green">+ {validityText(priced.bonusDays)} free (total {validityText(priced.totalDays)})</span>}
+            {canCoupon && (cp.result ? cp.result.applied : plan.offers)?.length > 0 && (
+              <p className="muted">🎁 {(cp.result ? cp.result.applied.map((a) => a.text) : plan.offers).join(' · ')}</p>
+            )}
             <p className="muted">{plan.description}</p>
             <ul>{plan.features?.map((f) => <li key={f}>{f}</li>)}</ul>
             {isCurrent && <span className="tag tag-green">Active until {endDate}</span>}
+            {canCoupon && (
+              <div className="coupon-row">
+                <input type="text" placeholder="Coupon code" value={cp.code || ''} maxLength={20} onChange={(e) => setCoupon(plan.planType, { code: e.target.value.toUpperCase(), result: null, error: '' })} />
+                <button type="button" className="btn btn-light btn-sm" disabled={cp.busy || !(cp.code || '').trim()} onClick={() => applyCoupon(plan.planType)}>{cp.busy ? 'Checking...' : 'Apply'}</button>
+              </div>
+            )}
+            {cp.error && <p className="error-text">{cp.error}</p>}
+            {cp.result && <p className="success-text">✓ Coupon applied. You pay ₹{cp.result.payRupees}.</p>}
             {plan.action === 'upgrade' && (
               <p className="muted">Pay only the difference (₹{plan.payRupees}). Your end date, {endDate}, stays the same.</p>
             )}

@@ -6,3 +6,8 @@
 
 .pay-row { display: grid; gap: 4px; font-size: 13px; }
 .pay-top { display: flex; justify-content: space-between; gap: 8px; align-items: center; }
+.offers { background: #fffbeb; border: 1px solid #fcd34d; }
+.offer-row { display: flex; flex-direction: column; gap: 2px; }
+.offer-text { font-weight: 700; color: #92400e; }
+.coupon-row { display: flex; gap: 8px; align-items: center; }
+.coupon-row input { flex: 1; text-transform: uppercase; }

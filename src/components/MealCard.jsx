@@ -5,34 +5,75 @@ import { useState } from 'react';
 import api, { errorMessage } from '../api/client';
 import { DISEASE_LABEL, NUTRIENT_GROUPS, NUTRIENT_GROUP_TITLES } from '../utils/health';
 
-// Basic plan: the same meal for every age group (loaded when the customer opens it)
+// Basic plan: portions are NOT shown on the card. The customer taps "See portions by age" and gets two tables,
+// one for boys and men and one for girls and women. Loaded only when opened.
 function AgePortions({ mealId }) {
+  const [open, setOpen] = useState(false);
   const [data, setData] = useState(null);
   const [error, setError] = useState('');
-  const load = (e) => {
-    if (!e.target.open || data) return;
-    api.get('/meals/age-portions', { params: { mealId } }).then((r) => setData(r.data)).catch((err) => setError(errorMessage(err)));
+  const [sex, setSex] = useState('male');
+  const toggle = () => {
+    const next = !open;
+    setOpen(next);
+    if (next && !data) api.get('/meals/age-portions', { params: { mealId } }).then((r) => setData(r.data)).catch((err) => setError(errorMessage(err)));
   };
+  const rows = data ? data[sex] : [];
   return (
-    <details className="meal-more" onToggle={load}>
-      <summary>Portion for every age group</summary>
-      {error && <p className="error-text">{error}</p>}
-      {!data && !error && <p className="muted">Loading...</p>}
-      {data && (
-        <>
-          <table className="age-table"><thead><tr><th>Age group</th><th>On the plate</th><th>kcal</th></tr></thead><tbody>
-            {data.bands.map((b) => (
-              <tr key={b.id} className={b.isYours ? 'yours' : ''}>
-                <td>{b.ageFrom}{b.ageTo ? `–${b.ageTo}` : '+'} yrs{b.isYours ? ' (you)' : ''}<br /><span className="muted">{b.weightKg} kg, {b.heightCm} cm</span></td>
-                <td>{b.portionText}</td>
-                <td>{Math.round(b.nutrition.calories)}</td>
-              </tr>
-            ))}
-          </tbody></table>
-          <p className="muted">{data.note}</p>
-        </>
+    <div className="age-portions">
+      <button type="button" className="btn btn-light" onClick={toggle}>{open ? 'Hide portions' : 'See portions by age'}</button>
+      {open && (
+        <div className="stack" style={{ marginTop: 8 }}>
+          {error && <p className="error-text">{error}</p>}
+          {!data && !error && <p className="muted">Loading...</p>}
+          {data && (
+            <>
+              <div className="chip-row">
+                <button type="button" className={`chip small ${sex === 'male' ? 'on' : ''}`} onClick={() => setSex('male')}>Boys and men</button>
+                <button type="button" className={`chip small ${sex === 'female' ? 'on' : ''}`} onClick={() => setSex('female')}>Girls and women</button>
+              </div>
+              <table className="age-table"><thead><tr><th>Age</th><th>What to serve</th><th>kcal</th></tr></thead><tbody>
+                {rows.map((b) => (
+                  <tr key={b.id}>
+                    <td>{b.ageFrom}{b.ageTo ? `–${b.ageTo}` : '+'} years</td>
+                    <td>{b.portionText}</td>
+                    <td>{b.nutrition.calories}</td>
+                  </tr>
+                ))}
+              </tbody></table>
+              <p className="muted">{data.note}</p>
+            </>
+          )}
+        </div>
       )}
-    </details>
+    </div>
+  );
+}
+
+// "Good for diabetes" / "Not good for diabetes" (Basic plan)
+function HealthLabels({ labels }) {
+  if (!labels?.length) return null;
+  return (
+    <div className="health-labels">
+      {labels.map((l) => (
+        <span key={l.disease} className={`tag ${l.verdict === 'good' ? 'tag-green' : 'tag-red'}`} title={[l.strength, l.reason].filter(Boolean).join(': ')}>
+          {l.verdict === 'good' ? '✓' : '✕'} {l.text}
+        </span>
+      ))}
+    </div>
+  );
+}
+
+// A small food that completes this meal (it is low in something the slot needs)
+function AddonBox({ addon, onTake }) {
+  const m = addon.meal;
+  return (
+    <div className="addon-box">
+      <strong>+ Add-on: {m.name}</strong>
+      <p className="muted">{addon.reason}</p>
+      {m.portionText && <p className="muted">{m.portionText}</p>}
+      <p className="muted">Together: {Math.round(addon.combined.calories)} kcal, {addon.combined.protein} g protein, {addon.combined.fiber} g fibre.</p>
+      {onTake && <button type="button" className="btn btn-light btn-sm" onClick={onTake}>Select meal with this add-on</button>}
+    </div>
   );
 }
 
@@ -59,7 +100,7 @@ function ScoreDetails({ d }) {
   );
 }
 
-export default function MealCard({ meal, selected, onSelect, ageTable = false }) {
+export default function MealCard({ meal, selected, onSelect, ageTable = false, canAddon = false }) {
   const n = meal.nutritionPerServing || {};
   const rec = meal.recommendation;
   return (
@@ -75,6 +116,7 @@ export default function MealCard({ meal, selected, onSelect, ageTable = false })
           <span className="tag tag-green">{meal.digestiveProfile?.digestiveLoad} to digest</span>
           {meal.madeInLast3Days && <span className="tag tag-amber">Made in the last 3 days</span>}
         </div>
+        <HealthLabels labels={meal.healthLabels} />
         {rec && <p className="reason">{rec.reason}</p>}
         {meal.portion && meal.portion.percentChange !== 0 && (
           <p className="portion-note">Portion adjusted for your age, goal, height and weight: {meal.portion.percentChange > 0 ? '+' : ''}{meal.portion.percentChange}% compared with {meal.portion.referenceLabel || `a ${meal.portion.referenceWeightKg} kg person`}.</p>
@@ -107,17 +149,18 @@ export default function MealCard({ meal, selected, onSelect, ageTable = false })
         {meal.components?.length > 0 && (
           <div className="plate">
             <strong>{meal.portion ? 'Your portion' : 'One serving'}</strong>
-            {meal.portionText || meal.components.map((c) => `${c.quantity} ${c.unit === 'piece' ? '' : c.unit + ' '}${c.name.toLowerCase()}`).join(', ')}
+            {meal.portionText || meal.components.map((c) => `${c.quantityText ?? c.quantity} ${c.unit === 'piece' ? '' : c.unit + ' '}${c.name.toLowerCase()}`).join(', ')}
             {meal.portion && <details className="meal-more"><summary>Compare with the reference person</summary>
               <ul className="ing-list">
                 {meal.components.map((c) => (
-                  <li key={c.name}>{c.name}: {c.quantity} {c.unit} <span className="ref">({c.referenceQuantity} {c.unit} for {meal.portion.referenceLabel || `a ${meal.portion.referenceWeightKg} kg person`})</span></li>
+                  <li key={c.name}>{c.name}: {c.quantityText ?? c.quantity} {c.unit} <span className="ref">({c.referenceQuantity} {c.unit} for {meal.portion.referenceLabel || `a ${meal.portion.referenceWeightKg} kg person`})</span></li>
                 ))}
               </ul>
               <p className="muted">Amounts are estimates, adjusted for your age, goal, height and weight.</p>
             </details>}
           </div>
         )}
+        {meal.addon?.meal && <AddonBox addon={meal.addon} onTake={canAddon && !selected ? () => onSelect(meal, meal.addon) : null} />}
         {meal.mainIngredients?.length > 0 && <div className="mains">{meal.mainIngredients.map((m) => <span key={m}>{m}</span>)}</div>}
         {rec && (
           <details className="meal-more">
