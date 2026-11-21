@@ -1,9 +1,10 @@
 import './MealCard.css';
 import './BodyGoal.css';
 import './MealPicker.css';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import MealPhotos from './MealPhotos';
 import api, { errorMessage } from '../api/client';
-import { DISEASE_LABEL, NUTRIENT_GROUPS, NUTRIENT_GROUP_TITLES } from '../utils/health';
+import { DISEASE_LABEL, RATING_LABEL, NUTRIENT_GROUPS, NUTRIENT_GROUP_TITLES } from '../utils/health';
 
 // Basic plan: portions are NOT shown on the card. The customer taps "See portions by age" and gets two tables,
 // one for boys and men and one for girls and women. Loaded only when opened.
@@ -63,16 +64,52 @@ function HealthLabels({ labels }) {
   );
 }
 
-// A small food that completes this meal (it is low in something the slot needs)
-function AddonBox({ addon, onTake }) {
-  const m = addon.meal;
+const KEYS = ['calories', 'protein', 'carbohydrates', 'fat', 'fiber'];
+const r1 = (x) => Math.round(x * 10) / 10;
+
+// Nutrition of a meal plus its add-on, added together (the server works out the same numbers when the plan is saved)
+function combineNutrition(n = {}, a = {}) {
+  return Object.fromEntries(KEYS.map((k) => [k, r1((Number(n[k]) || 0) + (Number(a[k]) || 0))]));
+}
+// A vitamin or mineral is known only when both foods have it; otherwise it stays NA
+function combineDetailed(d, e) {
+  if (!d) return d;
+  if (!e) return d;
+  const out = {};
+  for (const [group, values] of Object.entries(d)) {
+    out[group] = Object.fromEntries(Object.entries(values || {}).map(([k, v]) => {
+      const w = e?.[group]?.[k];
+      return [k, v == null || w == null ? null : r1(Number(v) + Number(w))];
+    }));
+  }
+  return out;
+}
+
+// Choose, change or take away the add-on of a Basic meal.
+function AddonOptions({ meal, options, current, onPick, onClose }) {
+  const [list, setList] = useState(null);
+  const [error, setError] = useState('');
+  useEffect(() => {
+    let off = false;
+    api.get('/meals/addon-options', { params: { slot: options.slot, mealId: meal._id, dietType: options.dietType } })
+      .then((r) => { if (!off) setList(r.data.options); })
+      .catch((err) => { if (!off) setError(errorMessage(err)); });
+    return () => { off = true; };
+  }, [meal._id, options.slot, options.dietType]);
   return (
-    <div className="addon-box">
-      <strong>+ Add-on: {m.name}</strong>
-      <p className="muted">{addon.reason}</p>
-      {m.portionText && <p className="muted">{m.portionText}</p>}
-      <p className="muted">Together: {Math.round(addon.combined.calories)} kcal, {addon.combined.protein} g protein, {addon.combined.fiber} g fibre.</p>
-      {onTake && <button type="button" className="btn btn-light btn-sm" onClick={onTake}>Select meal with this add-on</button>}
+    <div className="addon-options">
+      <div className="picker-head"><strong>Choose an add-on</strong><button type="button" className="btn btn-light btn-sm" onClick={onClose}>Close</button></div>
+      {error && <p className="error-text">{error}</p>}
+      {!list && !error && <p className="muted">Loading...</p>}
+      {list && list.length === 0 && <p className="muted">No add-on is available for this meal right now.</p>}
+      {(list || []).map((o) => (
+        <button key={o.meal._id} type="button" className={`addon-option ${current?.meal?._id === o.meal._id ? 'current' : ''}`}
+          onClick={() => onPick({ meal: o.meal, combined: o.combined, fills: o.fills })}>
+          <img src={o.meal.imageUrl} alt="" loading="lazy" />
+          <span><strong>{o.meal.name}</strong><small>{Math.round(o.meal.nutritionPerServing.calories)} kcal, {o.meal.nutritionPerServing.protein} g protein. Together {Math.round(o.combined.calories)} kcal.</small></span>
+          <span className={`fit-badge ${o.fits ? '' : 'fair'}`}>{o.fits ? (o.fills.length ? 'Fills a gap' : 'Fits') : 'A bit big'}</span>
+        </button>
+      ))}
     </div>
   );
 }
@@ -100,32 +137,64 @@ function ScoreDetails({ d }) {
   );
 }
 
-export default function MealCard({ meal, selected, onSelect, ageTable = false, canAddon = false }) {
-  const n = meal.nutritionPerServing || {};
+export default function MealCard({ meal, selected, onSelect, ageTable = false, canAddon = false, addonOptions = null, addonValue = null, onAddonChange = null }) {
   const rec = meal.recommendation;
+  // The add-on shown with this meal. A selected Basic meal takes it from the planner (so it matches what will be saved);
+  // otherwise it starts as the server's suggestion and the customer can take it away, change it or add one back.
+  const controlled = typeof onAddonChange === 'function';
+  const suggestion = meal.addon?.meal ? meal.addon : null;
+  const [local, setLocal] = useState(suggestion);
+  const [picking, setPicking] = useState(false);
+  useEffect(() => { setLocal(suggestion); setPicking(false); /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, [suggestion?.meal?._id, meal._id]);
+  const addon = controlled && selected ? addonValue : local;
+  const setAddon = (a) => { setLocal(a); setPicking(false); if (controlled && selected) onAddonChange(a); };
+  const canEdit = Boolean(addonOptions) && (!selected || controlled);
+  const canRemove = !selected || controlled;
+
+  const n = addon ? combineNutrition(meal.nutritionPerServing, addon.meal.nutritionPerServing) : (meal.nutritionPerServing || {});
+  const detailed = addon ? combineDetailed(meal.detailedNutrition, addon.meal.detailedNutrition) : meal.detailedNutrition;
+  const choose = () => onSelect(meal, canAddon || controlled ? addon : null);
   return (
     <div className={`meal-card ${selected ? 'selected' : ''} ${meal.madeInLast3Days ? 'recent' : ''}`}>
-      <img src={meal.imageUrl} alt={meal.name} loading="lazy" />
+      <MealPhotos meal={meal} addon={addon} />
       <div className="meal-body">
         <div className="meal-top">
-          <h4>{meal.name}</h4>
-          {rec && <span className="match">{rec.score}% match</span>}
+          <h4>{meal.name}{addon && <span className="combo-name-plus"> + </span>}{addon?.meal.name}</h4>
+          {rec && <span className={`match ${rec.score < 70 ? 'fair' : ''}`} title={`Score ${rec.score} out of 100 (an estimate)`}>{rec.fit || `${rec.score}% match`}</span>}
         </div>
         <div className="meal-tags">
           <span className="tag">{meal.cuisine}</span>
           <span className="tag tag-green">{meal.digestiveProfile?.digestiveLoad} to digest</span>
           {meal.madeInLast3Days && <span className="tag tag-amber">Made in the last 3 days</span>}
         </div>
+        {addon ? (
+          <div className="addon-included">
+            <span className="tag tag-green">✓ Add-on included</span>
+            <span className="combo-together">Nutrients below are for both together.</span>
+            <span className="addon-actions">
+              {canEdit && <button type="button" className="icon-btn" title="Choose another add-on" aria-label="Choose another add-on" onClick={() => setPicking(!picking)}>✎</button>}
+              {canRemove && <button type="button" className="icon-btn minus" title="Remove the add-on" aria-label="Remove the add-on" onClick={() => setAddon(null)}>−</button>}
+            </span>
+          </div>
+        ) : (canEdit || suggestion) && (!selected || controlled) && (
+          <div className="addon-add-row">
+            <button type="button" className="icon-btn plus" title="Add an add-on" aria-label="Add an add-on" onClick={() => (canEdit ? setPicking(true) : setAddon(suggestion))}>+</button>
+            <span>Add a small food to complete this meal</span>
+          </div>
+        )}
+        {picking && canEdit && <AddonOptions meal={meal} options={addonOptions} current={addon} onPick={setAddon} onClose={() => setPicking(false)} />}
+        {addon?.reason && <p className="reason">{addon.reason}</p>}
         <HealthLabels labels={meal.healthLabels} />
-        {rec && <p className="reason">{rec.reason}</p>}
+        {rec && !addon && <p className="reason">{rec.reason}</p>}
         {meal.portion && meal.portion.percentChange !== 0 && (
           <p className="portion-note">Portion adjusted for your age, goal, height and weight: {meal.portion.percentChange > 0 ? '+' : ''}{meal.portion.percentChange}% compared with {meal.portion.referenceLabel || `a ${meal.portion.referenceWeightKg} kg person`}.</p>
         )}
+        {meal.dietitianNote && <p className="note-box">Dietitian note: {meal.dietitianNote}</p>}
         {rec?.healthFlags?.length > 0 && (
           <ul className="warn-list">
-            {rec.healthFlags.filter((f) => f.kind !== 'not_applied' && f.kind !== 'conflict').map((f) => (
-              <li key={f.disease} style={{ color: f.kind === 'suitable' ? '#15803d' : undefined }}>
-                {DISEASE_LABEL[f.disease]}: {f.label}
+            {rec.healthFlags.filter((f) => f.kind === 'rated').map((f) => (
+              <li key={f.disease} className={`rate-${f.rating}`}>
+                {DISEASE_LABEL[f.disease]}: {f.label || RATING_LABEL[f.rating]}{f.reason ? `. ${f.reason}` : ''}
               </li>
             ))}
             {rec.healthFlags.filter((f) => f.kind === 'conflict').map((f) => (
@@ -133,10 +202,10 @@ export default function MealCard({ meal, selected, onSelect, ageTable = false, c
                 {DISEASE_LABEL[f.disease]}: rated suitable, but its own numbers say otherwise ({f.conflict}). The rating was not used. Check this meal once.
               </li>
             ))}
-            {rec.healthFlags.some((f) => f.kind === 'not_applied') && (
+            {rec.healthFlags.some((f) => f.kind === 'not_reviewed') && (
               <li style={{ color: '#92400e' }}>
-                Not defined for {rec.healthFlags.filter((f) => f.kind === 'not_applied').map((f) => DISEASE_LABEL[f.disease]).join(', ')}.
-                If you have this health condition, check this meal once before you eat it.
+                Not yet reviewed for {rec.healthFlags.filter((f) => f.kind === 'not_reviewed').map((f) => DISEASE_LABEL[f.disease]).join(', ')}.
+                It is shown lower in the list. If you have this health condition, check this meal with your doctor or dietitian first.
               </li>
             )}
           </ul>
@@ -145,6 +214,7 @@ export default function MealCard({ meal, selected, onSelect, ageTable = false, c
           <span><strong>{n.calories}</strong> kcal</span>
           <span><strong>{n.protein}g</strong> protein</span>
           <span><strong>{n.carbohydrates}g</strong> carbs</span>
+          {addon && <span><strong>{n.fiber}g</strong> fibre</span>}
         </div>
         {meal.components?.length > 0 && (
           <div className="plate">
@@ -160,9 +230,9 @@ export default function MealCard({ meal, selected, onSelect, ageTable = false, c
             </details>}
           </div>
         )}
-        {meal.addon?.meal && <AddonBox addon={meal.addon} onTake={canAddon && !selected ? () => onSelect(meal, meal.addon) : null} />}
+        {addon?.meal.portionText && <p className="muted">Add-on: {addon.meal.portionText}</p>}
         {meal.mainIngredients?.length > 0 && <div className="mains">{meal.mainIngredients.map((m) => <span key={m}>{m}</span>)}</div>}
-        {rec && (
+        {rec && !addon && (
           <details className="meal-more">
             <summary>What this adds to your day</summary>
             <p>
@@ -181,15 +251,15 @@ export default function MealCard({ meal, selected, onSelect, ageTable = false, c
             </ul>
           </details>
         )}
-        {meal.detailedNutrition && (
+        {detailed && (
           <details className="meal-more">
-            <summary>All nutrients{meal.portion ? ' (for your portion)' : ''}</summary>
+            <summary>All nutrients{addon ? ' (meal and add-on together)' : meal.portion ? ' (for your portion)' : ''}</summary>
             {Object.entries(NUTRIENT_GROUPS).map(([group, list]) => (
               <div key={group} className="nut-group">
                 <strong>{NUTRIENT_GROUP_TITLES[group]}</strong>
                 <table className="nut-table"><tbody>
                   {list.map((nu) => {
-                    const v = meal.detailedNutrition?.[group]?.[nu.key];
+                    const v = detailed?.[group]?.[nu.key];
                     return <tr key={nu.key}><td>{nu.label}</td><td className={v == null ? 'na' : ''}>{v == null ? 'NA' : `${v} ${nu.unit}`}</td></tr>;
                   })}
                 </tbody></table>
@@ -198,8 +268,8 @@ export default function MealCard({ meal, selected, onSelect, ageTable = false, c
             <p className="muted">NA means our team has not entered this value.</p>
           </details>
         )}
-        <button className={`btn ${selected ? 'btn-success' : 'btn-primary'}`} onClick={() => onSelect(meal)}>
-          {selected ? '✓ Picked (tap to remove)' : 'Select'}
+        <button className={`btn ${selected ? 'btn-success' : 'btn-primary'}`} onClick={choose}>
+          {selected ? '✓ Picked (tap to remove)' : addon ? 'Select meal with add-on' : 'Select'}
         </button>
       </div>
     </div>

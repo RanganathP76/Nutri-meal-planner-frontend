@@ -9,7 +9,7 @@ import './MealPicker.css';
 //  resetKey   changes when the slot, diet, cuisine or date changes, so we start again at the top 3
 const SIZE = 3;
 
-export default function MealPicker({ meals, total = 0, fetchMore, loading, selectedId, onSelect, resetKey, ageTable = false, canAddon = false }) {
+export default function MealPicker({ notice = '', meals, total = 0, fetchMore, loading, selectedId, onSelect, resetKey, ageTable = false, canAddon = false, addonOptions = null, addonFor = null, onAddonChange = null }) {
   const [pages, setPages] = useState([]); // pages of meals already received, oldest first
   const [at, setAt] = useState(0);
   const [more, setMore] = useState(false);
@@ -63,12 +63,13 @@ export default function MealPicker({ meals, total = 0, fetchMore, loading, selec
         <input type="search" placeholder="Search meals or ingredients, e.g. fish, ragi, paneer" value={q} onChange={(e) => setQ(e.target.value)} />
         {q && <button type="button" className="btn btn-light btn-sm" onClick={() => setQ('')}>Clear</button>}
       </div>
+      {notice && <p className="note-box">{notice}</p>}
       {err && <p className="error-text">{err}</p>}
 
       {term ? (
         <div className="stack">
           <p className="muted">{searching || !found ? 'Searching...' : found.matches ? `${found.matches} meal${found.matches === 1 ? '' : 's'} found for "${term}"${found.matches > found.meals.length ? ` (showing the best ${found.meals.length}, try a longer word to narrow it)` : ''}` : `No meal found for "${term}". Try another word.`}</p>
-          {(found?.meals || []).map((m) => <MealCard key={m._id} meal={m} selected={selectedId === m._id} onSelect={onSelect} ageTable={ageTable} canAddon={canAddon} />)}
+          {(found?.meals || []).map((m) => <MealCard key={m._id} meal={m} selected={selectedId === m._id} onSelect={onSelect} ageTable={ageTable} canAddon={canAddon} addonOptions={addonOptions} addonValue={addonFor ? addonFor(m) : null} onAddonChange={onAddonChange} />)}
         </div>
       ) : (
         <div className="stack" style={{ opacity: loading || more ? 0.6 : 1 }}>
@@ -76,7 +77,7 @@ export default function MealPicker({ meals, total = 0, fetchMore, loading, selec
             <strong>{at === 0 ? 'Top picks for you' : `More ideas (set ${at + 1})`}</strong>
             <span className="muted">{Math.min(seen.length, total)} of {total} seen</span>
           </div>
-          {current.map((m) => <MealCard key={m._id} meal={m} selected={selectedId === m._id} onSelect={onSelect} ageTable={ageTable} canAddon={canAddon} />)}
+          {current.map((m) => <MealCard key={m._id} meal={m} selected={selectedId === m._id} onSelect={onSelect} ageTable={ageTable} canAddon={canAddon} addonOptions={addonOptions} addonValue={addonFor ? addonFor(m) : null} onAddonChange={onAddonChange} />)}
           <div className="picker-bar">
             <button type="button" className="btn btn-light" onClick={() => setAt(at - 1)} disabled={at === 0}>&larr; Previous {SIZE}</button>
             <button type="button" className="btn btn-primary" onClick={showOther} disabled={more || total <= SIZE}>
@@ -91,13 +92,14 @@ export default function MealPicker({ meals, total = 0, fetchMore, loading, selec
 
 // What the customer has picked so far, kept at the top of the planner
 export function PickedSummary({ items }) {
+  // each item: { key, label, name, addonName? } ; a meal with an add-on reads "Meal + Add-on"
   if (!items.some((i) => i.name)) return null;
   return (
     <div className="card picked">
       {items.map((i) => (
         <div key={i.key} className="picked-row">
           <span className="muted">{i.label}</span>
-          <span>{i.name ? `✓ ${i.name}` : '—'}</span>
+          <span>{i.name ? `✓ ${i.name}${i.addonName ? ` + ${i.addonName}` : ''}` : '—'}</span>
         </div>
       ))}
     </div>

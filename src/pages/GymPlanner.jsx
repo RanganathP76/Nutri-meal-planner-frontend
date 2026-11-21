@@ -172,7 +172,7 @@ export default function GymPlanner() {
       {loading && meals.length === 0 ? <p className="center-note">Finding the best meals for you...</p>
         : meals.length === 0 && !error ? <p className="center-note">No safe meals found for this choice yet.</p>
         : (
-          <MealPicker canAddon meals={meals} total={info?.total || 0} fetchMore={(extra) => api.get('/gym/recommendations', { params: { ...{ stepId, dietType, cuisine, date, picks: picksParam, seed: APP_SEED }, ...extra } }).then((r) => r.data)} loading={loading} selectedId={picks[stepId]?._id} onSelect={choose} resetKey={`${stepId}|${dietType}|${cuisine}|${date}`} />
+          <MealPicker canAddon notice={info?.lightOnlyMessage || ""} meals={meals} total={info?.total || 0} fetchMore={(extra) => api.get('/gym/recommendations', { params: { ...{ stepId, dietType, cuisine, date, picks: picksParam, seed: APP_SEED }, ...extra } }).then((r) => r.data)} loading={loading} selectedId={picks[stepId]?._id} onSelect={choose} resetKey={`${stepId}|${dietType}|${cuisine}|${date}`} />
         )}
 
       <AddonPicker plan="gym" date={date} dietType={dietType} picksParam={picksParam} addons={addons} setAddons={setAddons} />

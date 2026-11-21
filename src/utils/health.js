@@ -10,6 +10,12 @@ export const DISEASES = [
 ];
 export const DISEASE_LABEL = Object.fromEntries(DISEASES);
 
+// One 5-point scale for every condition (same numbers as the server). 1 is best, 5 is worst.
+export const RATING_LABEL = { 1: 'Suitable', 2: 'Slightly suitable', 3: 'Moderate', 4: 'Slightly not suitable', 5: 'Not suitable' };
+export const RATINGS = [1, 2, 3, 4, 5];
+export const REASON_REQUIRED = [1, 5];
+export const REASON_ALLOWED = [1, 2, 4, 5];
+
 // The same five goals in the Gym and Individual plans. Keys match the server.
 export const GOALS = [
   ['weight_loss', 'Lose weight / lose body fat'],
