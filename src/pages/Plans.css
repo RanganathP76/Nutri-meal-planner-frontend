@@ -1,13 +1,21 @@
-.plan { display: grid; gap: 8px; }
-.plan.current { border: 2px solid var(--success); }
-.plan-head { display: flex; justify-content: space-between; gap: 10px; align-items: flex-start; }
-.plan-head strong { color: var(--primary); font-size: 18px; white-space: nowrap; }
-.plan ul { margin: 0; padding-left: 18px; font-size: 13px; color: #4b5563; display: grid; gap: 2px; }
-
-.pay-row { display: grid; gap: 4px; font-size: 13px; }
-.pay-top { display: flex; justify-content: space-between; gap: 8px; align-items: center; }
-.offers { background: #fffbeb; border: 1px solid #fcd34d; }
-.offer-row { display: flex; flex-direction: column; gap: 2px; }
-.offer-text { font-weight: 700; color: #92400e; }
+.plan.current { outline: 2px solid var(--primary); }
+.plan-head { display: flex; justify-content: space-between; gap: 12px; align-items: flex-start; }
+.plan-head h2 { font-size: 22px; }
+.plan-price { display: grid; justify-items: end; }
+.plan-price strong { font-family: var(--font-head); font-size: 30px; letter-spacing: -0.02em; }
+.plan-price s { font-size: 14px; opacity: 0.7; }
+.plan-tags { display: flex; flex-wrap: wrap; gap: 8px; }
+.plan-features { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; font-size: 15px; }
+.plan-features li { display: flex; gap: 10px; align-items: flex-start; }
+.plan-features svg { flex: none; margin-top: 3px; color: var(--primary); }
+.ui-card.hero .plan-features svg { color: var(--accent); }
+.ui-card.hero .plan-price s { color: #cfe3d6; }
+.ui-card.hero .coupon-row input { background: rgba(255, 255, 255, 0.95); }
 .coupon-row { display: flex; gap: 8px; align-items: center; }
 .coupon-row input { flex: 1; text-transform: uppercase; }
+.offers { background: var(--warn-soft); border-color: #f1d79b; }
+.offer-title { display: flex; align-items: center; gap: 8px; font-size: 18px; }
+.offer-row { display: flex; flex-direction: column; gap: 2px; }
+.offer-text { font-weight: 700; color: #7a4a05; }
+.pay-row { gap: 6px; }
+.pay-top { display: flex; justify-content: space-between; gap: 8px; align-items: center; }

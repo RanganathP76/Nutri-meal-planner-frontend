@@ -1,5 +1,7 @@
 import { useEffect, useState } from 'react';
+import { Users, Check, Circle } from 'lucide-react';
 import api, { errorMessage } from '../api/client';
+import { Card, Empty, Skeleton } from '../ui/Kit';
 import './ReferralList.css';
 
 export default function ReferralList() {
@@ -11,34 +13,35 @@ export default function ReferralList() {
   }, []);
 
   if (error) return <p className="error-text">{error}</p>;
-  if (!data) return null;
+  if (!data) return <Skeleton height={140} />;
   const { summary, referrals } = data;
 
   return (
     <div className="stack">
-      <h4>People you referred</h4>
+      <h3>People you referred</h3>
       <div className="ref-summary">
         <div><strong>{summary.total}</strong><span>Joined</span></div>
         <div><strong>{summary.successful}</strong><span>Bought a plan</span></div>
         <div><strong>₹{summary.earnedRupees}</strong><span>Earned</span></div>
       </div>
-      <p className="muted">You earn a reward once for each person, when they buy their first plan.</p>
 
-      {referrals.length === 0 && <p className="center-note">Nobody has joined with your code yet. Share your link to start earning.</p>}
+      {referrals.length === 0 && (
+        <Empty icon={<Users size={26} />} title="No one yet" text="Nobody has joined with your code yet. Share your link to start earning." />
+      )}
 
       {referrals.map((r) => (
-        <div key={r.id} className="card ref-row">
+        <Card key={r.id} className="ref-row">
           <div className="ref-top">
             <strong>{r.name}</strong>
-            <span className="muted">{r.phone}</span>
+            <span className="ui-muted">{r.phone}</span>
           </div>
           <div className="ref-steps">
-            <span className="done">✓ Account created · {new Date(r.joinedAt).toLocaleDateString('en-IN')}</span>
+            <span className="done"><Check size={16} aria-hidden="true" /> Account created · {new Date(r.joinedAt).toLocaleDateString('en-IN')}</span>
             {r.purchased
-              ? <span className="done">✓ First plan bought{r.rewardRupees ? ` · ₹${r.rewardRupees} earned` : ''}</span>
-              : <span className="wait">○ Waiting for their first plan</span>}
+              ? <span className="done"><Check size={16} aria-hidden="true" /> First plan bought{r.rewardRupees ? ` · ₹${r.rewardRupees} earned` : ''}</span>
+              : <span className="wait"><Circle size={16} aria-hidden="true" /> Waiting for their first plan</span>}
           </div>
-        </div>
+        </Card>
       ))}
     </div>
   );

@@ -1,38 +1,40 @@
 import { Link, useLocation, useParams } from 'react-router-dom';
+import { PartyPopper, TriangleAlert, Hourglass, SearchCheck } from 'lucide-react';
+import { Card } from '../ui/Kit';
 import './PaymentResult.css';
 
 const COPY = {
-  success: { icon: '🎉', title: 'Payment successful', text: 'Your plan is active. Start planning your meals.', to: '/planner', cta: 'Plan my meals' },
+  success: { Icon: PartyPopper, tone: 'good', title: 'Payment successful', text: 'Your plan is active. Start planning your meals.', to: '/planner', cta: 'Plan my meals' },
   failure: {
-    icon: '⚠️', title: 'Payment did not go through',
+    Icon: TriangleAlert, tone: 'bad', title: 'Payment did not go through',
     text: 'If any money was deducted, it is usually returned by your bank within 5 to 7 working days.',
     to: '/plans', cta: 'Try again'
   },
   pending: {
-    icon: '⏳', title: 'Confirming your payment',
+    Icon: Hourglass, tone: 'warn', title: 'Confirming your payment',
     text: 'We are confirming your payment. Your plan will activate within a few minutes. Check your Account page.',
     to: '/account', cta: 'Go to account'
   },
   review: {
-    icon: '🔎', title: 'We received your payment',
+    Icon: SearchCheck, tone: 'warn', title: 'We received your payment',
     text: 'Your plan changed while you were paying, so we need to check it. Our team will fix it. Please contact support if you do not hear from us.',
     to: '/account', cta: 'Go to account'
   }
-
 };
 
 export default function PaymentResult() {
   const { result } = useParams();
   const { state } = useLocation();
   const c = COPY[result] || COPY.pending;
+  const { Icon } = c;
 
   return (
-    <div className="result card stack">
-      <div className="result-icon">{c.icon}</div>
-      <h3>{c.title}</h3>
+    <Card className="result">
+      <span className={`result-icon ${c.tone}`}><Icon size={32} aria-hidden="true" /></span>
+      <h1 className="ui-title">{c.title}</h1>
       {result === 'failure' && state?.reason && <p className="error-text">{state.reason}</p>}
-      <p className="muted">{c.text}</p>
-      <Link to={c.to} className="btn btn-primary">{c.cta}</Link>
-    </div>
+      <p className="ui-muted">{c.text}</p>
+      <Link to={c.to} className="ui-btn primary block">{c.cta}</Link>
+    </Card>
   );
 }

@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Link, Navigate, useNavigate } from 'react-router-dom';
+import { Leaf } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { errorMessage } from '../api/client';
 import GoogleButton from '../components/GoogleButton';
@@ -29,8 +30,9 @@ export default function Login() {
 
   return (
     <div className="auth">
-      <h2>Nutrition Planner</h2>
-      <p className="sub">Log in with the Google account you registered with</p>
+      <span className="auth-mark" aria-hidden="true"><Leaf size={26} /></span>
+      <h1>Welcome back</h1>
+      <p className="sub">Log in with the Google account you registered with.</p>
       {notice && <p className="error-text">{notice}</p>}
       <GoogleButton onCredential={onCredential} text="signin_with" disabled={busy} />
       {busy && <p className="muted" style={{ textAlign: 'center' }}>Signing you in...</p>}

@@ -1,9 +1,11 @@
 import { useEffect, useState } from 'react';
 import { Link, Navigate, useNavigate, useSearchParams } from 'react-router-dom';
+import { Leaf, Check } from 'lucide-react';
 import api, { errorMessage } from '../api/client';
 import { useAuth } from '../context/AuthContext';
 import { getPendingRef, setPendingRef, clearPendingRef } from '../utils/referral';
 import GoogleButton from '../components/GoogleButton';
+import { Button, Sheet } from '../ui/Kit';
 import './Auth.css';
 
 const checkCode = async (code) => (await api.get('/users/referral-check', { params: { code } })).data.valid;
@@ -81,10 +83,11 @@ export default function Register() {
 
   return (
     <div className="auth">
-      <h2>Create account</h2>
-      <p className="sub">Get meal plans that keep your nutrition balanced</p>
+      <span className="auth-mark" aria-hidden="true"><Leaf size={26} /></span>
+      <h1>Create your account</h1>
+      <p className="sub">Meal plans that keep your nutrition balanced. One Google tap, no password.</p>
 
-      {refState === 'applied' && <div className="ref-applied">✓ Referral code applied: <strong>{applied}</strong></div>}
+      {refState === 'applied' && <div className="ref-applied"><Check size={18} aria-hidden="true" /> Referral code applied: <strong>{applied}</strong></div>}
       {refState === 'input' && (
         <div className="stack">
           {linkInvalid && <p className="muted">The code in your link was not valid. You can enter another one if you have it.</p>}
@@ -107,16 +110,11 @@ export default function Register() {
       <p className="muted legal">We only use your Google name and email to create your account.</p>
       <p className="switch">Already registered? <Link to="/login">Log in</Link></p>
 
-      {pending && (
-        <div className="modal-back" role="dialog" aria-modal="true">
-          <div className="modal card stack">
-            <h3>Referral code was invalid</h3>
-            <p className="muted">We could not find that referral code. Do you want to continue creating your account without it?</p>
-            <button className="btn btn-primary" onClick={continueWithout}>Continue</button>
-            <button className="btn btn-light" onClick={() => setPending(null)}>Cancel</button>
-          </div>
-        </div>
-      )}
+      <Sheet open={Boolean(pending)} onClose={() => setPending(null)} title="Referral code was invalid">
+        <p className="ui-muted" style={{ fontSize: 15 }}>We could not find that referral code. Do you want to continue creating your account without it?</p>
+        <Button block onClick={continueWithout}>Continue without it</Button>
+        <Button variant="ghost" block onClick={() => setPending(null)}>Cancel</Button>
+      </Sheet>
     </div>
   );
 }

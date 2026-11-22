@@ -1,15 +1,18 @@
-.balance { background: var(--primary); color: #fff; padding: 20px; border-radius: 12px; text-align: center; display: grid; gap: 8px; }
-.balance h1 { margin: 0; font-size: 34px; }
-.balance .code { font-size: 13px; background: rgba(255, 255, 255, 0.2); padding: 6px 12px; border-radius: 8px; justify-self: center; }
-.tx { display: grid; gap: 4px; font-size: 13px; }
-.tx-row { display: flex; justify-content: space-between; }
+.wal-hero { gap: 6px; }
+.wal-balance { font-family: var(--font-head); font-size: 42px; letter-spacing: -0.03em; }
+.wal-code { display: flex; align-items: center; justify-content: space-between; gap: 10px; background: rgba(255, 255, 255, 0.12); border-radius: 12px; padding: 6px 6px 6px 14px; font-size: 14px; margin-top: 6px; }
+.wal-code button { width: 44px; height: 44px; border: 0; border-radius: 10px; background: rgba(255, 255, 255, 0.16); color: #fff; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; }
+.wal-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 8px; }
+.wal-line { display: flex; justify-content: space-between; align-items: center; gap: 10px; font-size: 14px; }
+.wal-ledger { display: flex !important; align-items: center; gap: 12px; }
+.wal-ledger-main { flex: 1; display: grid; min-width: 0; }
+.wal-dir { width: 38px; height: 38px; border-radius: 12px; display: inline-flex; align-items: center; justify-content: center; flex: none; }
+.wal-dir.credit { background: var(--primary-soft); color: var(--primary); }
+.wal-dir.debit { background: var(--danger-soft); color: var(--danger); }
 .plus { color: var(--success); }
 .minus { color: var(--danger); }
-
-.seg { display: flex; gap: 6px; }
-.seg button { flex: 1; padding: 10px; border: 1px solid #d1d5db; border-radius: 8px; background: #fff; font-weight: 600; cursor: pointer; }
-.seg button.on { background: var(--primary); color: #fff; border-color: var(--primary); }
-.quote { width: 100%; border-collapse: collapse; font-size: 13px; }
-.quote td { padding: 6px 0; border-bottom: 1px solid var(--border); }
+.quote { width: 100%; border-collapse: collapse; font-size: 14px; }
+.quote td { padding: 8px 0; border-bottom: 1px solid var(--border); }
 .quote td:last-child { text-align: right; }
-.quote .net td { font-weight: 700; border-bottom: 0; font-size: 15px; }
+.quote .net td { font-weight: 700; border-bottom: 0; font-size: 17px; color: var(--primary-dark); }
+.wal-submit { position: sticky; bottom: calc(80px + env(safe-area-inset-bottom)); }

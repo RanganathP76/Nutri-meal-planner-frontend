@@ -1,2 +1,6 @@
-.result { text-align: center; margin-top: 24px; }
-.result-icon { font-size: 48px; }
+.result { text-align: center; justify-items: center; padding: 32px 20px; margin-top: 24px; }
+.result-icon { width: 72px; height: 72px; border-radius: 24px; display: inline-flex; align-items: center; justify-content: center; }
+.result-icon.good { background: var(--primary-soft); color: var(--primary); }
+.result-icon.warn { background: var(--warn-soft); color: #7a4a05; }
+.result-icon.bad { background: var(--danger-soft); color: var(--danger); }
+.result .ui-btn { margin-top: 8px; }

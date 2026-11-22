@@ -1,7 +1,9 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { Check, Gift, Tag } from 'lucide-react';
 import api, { errorMessage } from '../api/client';
 import { useAuth } from '../context/AuthContext';
+import { Button, Card, Chip, Skeleton, useFeedback } from '../ui/Kit';
 import './Plans.css';
 
 const validityText = (d) =>
@@ -12,6 +14,8 @@ const STATUS = { paid: 'Paid', failed: 'Failed', refunded: 'Refunded', partially
 export default function Plans() {
   const { user, refreshUser } = useAuth();
   const navigate = useNavigate();
+  const { confirm, notify } = useFeedback();
+  const [loadingPlans, setLoadingPlans] = useState(true);
   const [plans, setPlans] = useState([]);
   const [history, setHistory] = useState([]);
   const [error, setError] = useState('');
@@ -21,7 +25,7 @@ export default function Plans() {
 
 
   const load = () => {
-    api.get('/payments/plans').then((res) => { setPlans(res.data.plans); setOffers(res.data.offers || []); }).catch((err) => setError(errorMessage(err)));
+    api.get('/payments/plans').then((res) => { setPlans(res.data.plans); setOffers(res.data.offers || []); }).catch((err) => setError(errorMessage(err))).finally(() => setLoadingPlans(false));
     api.get('/payments/mine').then((res) => setHistory(res.data.payments)).catch(() => {});
   };
   useEffect(load, []);
@@ -58,7 +62,7 @@ export default function Plans() {
         description: data.planTitle,
         order_id: data.orderId,
         prefill: { email: user.email, name: user.fullName },
-        theme: { color: '#2563eb' },
+        theme: { color: '#1f7a4d' },
         modal: {
           // The customer closed the window after a failed attempt
           ondismiss: () => { if (failedReason) navigate('/payment/failure', { state: { reason: failedReason } }); }
@@ -96,12 +100,14 @@ export default function Plans() {
   };
 
   const switchPlan = async (planType) => {
-    if (!window.confirm('Switch to this plan for free? Your end date stays the same. There is no refund or credit for the price difference.')) return;
+    const ok = await confirm({ title: 'Switch to this plan for free?', text: 'Your end date stays the same. There is no refund or credit for the price difference.', okLabel: 'Switch plan' });
+    if (!ok) return;
     setBusyPlan(planType);
     setError('');
     try {
       await api.post('/payments/switch-plan', { planType });
       await refreshUser();
+      notify('Plan switched');
       load();
     } catch (err) {
       setError(errorMessage(err));
@@ -110,30 +116,34 @@ export default function Plans() {
     }
   };
 
+  const order = { basic: 0, gym: 1, individual: 2 };
+  const sorted = [...plans].sort((a, b) => (order[a.planType] ?? 9) - (order[b.planType] ?? 9));
+
   return (
     <div className="stack">
-      <div>
-        <h3 className="page-title">Choose your plan</h3>
-        <p className="muted">One payment. Valid for the period shown.</p>
+      <div className="ui-header">
+        <p className="ui-eyebrow">Plans</p>
+        <h1 className="ui-title">Choose your plan</h1>
+        <p className="ui-muted">One payment, valid for the period shown. Plans are non-refundable. Switching to a lower plan is free, and an upgrade costs only the difference.</p>
       </div>
       {error && <p className="error-text">{error}</p>}
 
-            <p className="muted">Plans are non-refundable. Switching to a lower plan is free, and an upgrade costs only the difference.</p>
-
       {offers.length > 0 && (
-        <div className="card stack offers">
-          <strong>🎁 Offers for you</strong>
+        <Card className="offers">
+          <h3 className="offer-title"><Gift size={18} aria-hidden="true" /> Offers for you</h3>
           {offers.map((o) => (
             <div key={o.id} className="offer-row">
               <span className="offer-text">{o.text}</span>
-              <span className="muted">{o.title}{o.description ? ` · ${o.description}` : ''}{o.endsAt ? ` · until ${new Date(o.endsAt).toLocaleDateString('en-IN')}` : ''}</span>
+              <span className="ui-muted">{o.title}{o.description ? ` · ${o.description}` : ''}{o.endsAt ? ` · until ${new Date(o.endsAt).toLocaleDateString('en-IN')}` : ''}</span>
             </div>
           ))}
-          <p className="muted">These are added automatically when you pay. Have a coupon code? Enter it under the plan.</p>
-        </div>
+          <p className="ui-muted">These are added automatically when you pay. Have a coupon code? Enter it under the plan.</p>
+        </Card>
       )}
 
-      {plans.map((plan) => {
+      {loadingPlans && <><Skeleton height={260} /><Skeleton height={260} /></>}
+
+      {sorted.map((plan) => {
         const isCurrent = current?.planType === plan.planType;
         const cp = coupons[plan.planType] || {};
         const priced = cp.result || plan; // the coupon result, or the plan with offers for everyone
@@ -142,66 +152,71 @@ export default function Plans() {
           : plan.action === 'extend' ? `Extend for ₹${pay}` : `Pay ₹${pay}`;
         const canCoupon = plan.action === 'buy' || plan.action === 'extend';
         const endDate = current ? new Date(current.expiresAt).toLocaleDateString('en-IN') : '';
+        const hot = plan.planType === 'gym';
         return (
-          <div key={plan.planType} className={`card plan ${isCurrent ? 'current' : ''}`}>
+          <Card key={plan.planType} hero={hot} className={`plan ${isCurrent ? 'current' : ''}`}>
             <div className="plan-head">
-              <h4>{plan.title}</h4>
-              <strong>
-                {canCoupon && priced.discountRupees > 0 && <s className="muted" style={{ marginRight: 6 }}>₹{plan.priceRupees}</s>}
-                ₹{canCoupon ? pay : plan.priceRupees}
-              </strong>
+              <div>
+                <h2>{plan.title}</h2>
+                <p className="ui-muted">Valid for {validityText(plan.validityDays)}</p>
+              </div>
+              <div className="plan-price">
+                {canCoupon && priced.discountRupees > 0 && <s>₹{plan.priceRupees}</s>}
+                <strong>₹{canCoupon ? pay : plan.priceRupees}</strong>
+              </div>
             </div>
-            <span className="muted">Valid for {validityText(plan.validityDays)}</span>
-            {canCoupon && priced.bonusDays > 0 && <span className="tag tag-green">+ {validityText(priced.bonusDays)} free (total {validityText(priced.totalDays)})</span>}
+            <div className="plan-tags">
+              {isCurrent && <Chip>Active until {endDate}</Chip>}
+              {canCoupon && priced.bonusDays > 0 && <Chip tone="warn">+ {validityText(priced.bonusDays)} free (total {validityText(priced.totalDays)})</Chip>}
+            </div>
             {canCoupon && (cp.result ? cp.result.applied : plan.offers)?.length > 0 && (
-              <p className="muted">🎁 {(cp.result ? cp.result.applied.map((a) => a.text) : plan.offers).join(' · ')}</p>
+              <p className="ui-muted"><Gift size={14} aria-hidden="true" /> {(cp.result ? cp.result.applied.map((a) => a.text) : plan.offers).join(' · ')}</p>
             )}
-            <p className="muted">{plan.description}</p>
-            <ul>{plan.features?.map((f) => <li key={f}>{f}</li>)}</ul>
-            {isCurrent && <span className="tag tag-green">Active until {endDate}</span>}
+            <p className="ui-muted">{plan.description}</p>
+            <ul className="plan-features">{plan.features?.map((f) => <li key={f}><Check size={16} aria-hidden="true" /><span>{f}</span></li>)}</ul>
             {canCoupon && (
               <div className="coupon-row">
-                <input type="text" placeholder="Coupon code" value={cp.code || ''} maxLength={20} onChange={(e) => setCoupon(plan.planType, { code: e.target.value.toUpperCase(), result: null, error: '' })} />
-                <button type="button" className="btn btn-light btn-sm" disabled={cp.busy || !(cp.code || '').trim()} onClick={() => applyCoupon(plan.planType)}>{cp.busy ? 'Checking...' : 'Apply'}</button>
+                <input type="text" aria-label="Coupon code" placeholder="Coupon code" value={cp.code || ''} maxLength={20} onChange={(e) => setCoupon(plan.planType, { code: e.target.value.toUpperCase(), result: null, error: '' })} />
+                <Button variant="soft" disabled={cp.busy || !(cp.code || '').trim()} onClick={() => applyCoupon(plan.planType)}><Tag size={16} aria-hidden="true" /> {cp.busy ? 'Checking...' : 'Apply'}</Button>
               </div>
             )}
             {cp.error && <p className="error-text">{cp.error}</p>}
-            {cp.result && <p className="success-text">✓ Coupon applied. You pay ₹{cp.result.payRupees}.</p>}
+            {cp.result && <p className="success-text">Coupon applied. You pay ₹{cp.result.payRupees}.</p>}
             {plan.action === 'upgrade' && (
-              <p className="muted">Pay only the difference (₹{plan.payRupees}). Your end date, {endDate}, stays the same.</p>
+              <p className="ui-muted">Pay only the difference (₹{plan.payRupees}). Your end date, {endDate}, stays the same.</p>
             )}
             {plan.action === 'switch' ? (
               <>
-                <p className="muted">Switch for free. Your end date, {endDate}, stays the same.</p>
-                <button className="btn btn-light" disabled={busyPlan === plan.planType} onClick={() => switchPlan(plan.planType)}>
+                <p className="ui-muted">Switch for free. Your end date, {endDate}, stays the same.</p>
+                <Button variant="soft" block disabled={busyPlan === plan.planType} onClick={() => switchPlan(plan.planType)}>
                   {busyPlan === plan.planType ? 'Please wait...' : 'Switch to this plan (free)'}
-                </button>
+                </Button>
               </>
             ) : (
-              <button className="btn btn-primary" disabled={busyPlan === plan.planType} onClick={() => buy(plan.planType)}>
+              <Button variant={hot ? 'accent' : 'primary'} block disabled={busyPlan === plan.planType} onClick={() => buy(plan.planType)}>
                 {busyPlan === plan.planType ? 'Please wait...' : label}
-              </button>
+              </Button>
             )}
-          </div>
+          </Card>
         );
       })}
 
       {history.length > 0 && (
         <>
-          <h4>Payment history</h4>
+          <h3>Payment history</h3>
           {history.map((p) => (
-            <div key={p._id} className="card pay-row">
+            <Card key={p._id} className="pay-row">
               <div className="pay-top">
                 <strong>{p.kind === 'upgrade' ? `Upgrade to ${p.planSnapshot?.title}` : p.planSnapshot?.title}</strong>
                 <strong>{rupees(p.amountPaise)}</strong>
               </div>
-              <div className="pay-top muted">
+              <div className="pay-top ui-muted">
                 <span>{new Date(p.paidAt || p.createdAt).toLocaleDateString('en-IN')}</span>
-                <span className={`tag ${p.status === 'paid' ? 'tag-green' : p.status === 'failed' ? '' : 'tag-amber'}`}>{STATUS[p.status]}</span>
+                <Chip tone={p.status === 'paid' ? '' : p.status === 'failed' ? 'bad' : 'warn'}>{STATUS[p.status]}</Chip>
               </div>
-              {p.refundedPaise > 0 && <span className="muted">Refunded {rupees(p.refundedPaise)}</span>}
-              {p.razorpayPaymentId && <span className="muted">Ref: {p.razorpayPaymentId}</span>}
-            </div>
+              {p.refundedPaise > 0 && <span className="ui-muted">Refunded {rupees(p.refundedPaise)}</span>}
+              {p.razorpayPaymentId && <span className="ui-muted">Ref: {p.razorpayPaymentId}</span>}
+            </Card>
           ))}
         </>
       )}

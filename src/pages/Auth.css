@@ -1,13 +1,13 @@
-.auth { max-width: 420px; margin: 0 auto; padding: 40px 20px; }
-.auth h2 { text-align: center; margin-bottom: 6px; }
-.auth .sub { text-align: center; color: var(--muted); font-size: 14px; margin: 0 0 24px; }
+.auth { max-width: 440px; margin: 0 auto; padding: calc(40px + env(safe-area-inset-top)) 20px 40px; display: grid; gap: 14px; justify-items: stretch; }
+.auth-mark { justify-self: center; width: 60px; height: 60px; border-radius: 20px; background: var(--primary-dark); color: var(--accent); display: inline-flex; align-items: center; justify-content: center; }
+.auth h1 { text-align: center; font-size: 30px; letter-spacing: -0.03em; }
+.auth .sub { text-align: center; color: var(--muted); font-size: 15px; margin: 0 0 8px; }
 .auth form { display: grid; gap: 12px; }
-.auth .switch { text-align: center; margin-top: 16px; font-size: 14px; }
-.auth .switch a { color: var(--primary); font-weight: 600; text-decoration: none; }
-
-.ref-applied { background: #dcfce7; color: #166534; padding: 12px; border-radius: 8px; font-size: 14px; }
-.modal-back { position: fixed; inset: 0; background: rgba(0, 0, 0, 0.5); display: flex; align-items: center; justify-content: center; padding: 20px; z-index: 50; }
-.modal { width: 100%; max-width: 360px; }
-
-.google-wrap { margin: 16px 0 8px; } .legal { text-align: center; margin: 12px 0; }.consent { display: flex; align-items: flex-start; gap: 8px; font-size: 13px; line-height: 1.4; }
-.consent input { width: auto; margin-top: 3px; }
+.auth .switch { text-align: center; margin-top: 8px; font-size: 15px; }
+.auth .switch a { color: var(--primary); font-weight: 700; text-decoration: none; }
+.ref-applied { display: flex; align-items: center; gap: 8px; background: var(--primary-soft); color: #14573a; padding: 14px; border-radius: var(--radius-sm); font-size: 14px; }
+.google-wrap { margin: 12px 0 4px; display: flex; justify-content: center; }
+.legal { text-align: center; margin: 8px 0; line-height: 1.7; }
+.legal a { color: var(--primary); }
+.consent { display: flex; align-items: flex-start; gap: 10px; font-size: 14px; line-height: 1.45; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 14px; }
+.consent input { width: 22px; height: 22px; margin-top: 1px; flex: none; accent-color: var(--primary); }

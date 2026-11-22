@@ -1,2 +1,7 @@
-.acc-row { display: flex; justify-content: space-between; gap: 12px; font-size: 14px; }
-.acc-row strong { text-align: right; word-break: break-word; }
+.acc-hero { display: flex !important; align-items: center; gap: 16px; }
+.acc-avatar { width: 60px; height: 60px; border-radius: 20px; background: var(--primary-dark); color: var(--accent); font-family: var(--font-head); font-weight: 700; font-size: 22px; display: inline-flex; align-items: center; justify-content: center; flex: none; }
+.acc-who { min-width: 0; }
+.acc-who .ui-title { font-size: 22px; word-break: break-word; }
+.acc-who .ui-muted { word-break: break-all; }
+.acc-head { display: flex; align-items: center; justify-content: space-between; }
+.acc-ico { color: var(--primary); }

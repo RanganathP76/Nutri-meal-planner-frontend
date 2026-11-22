@@ -2,3 +2,5 @@
 node_modules
 build
 .env
+# patch files used to deliver changes; do not commit them
+*.patch

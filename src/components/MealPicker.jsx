@@ -42,7 +42,6 @@ export default function MealPicker({ notice = '', meals, total = 0, fetchMore, l
 
   const seen = pages.flat();
   const current = pages[at] || [];
-  const canGoOn = at < pages.length - 1 || total > seen.length || total > SIZE;
 
   const showOther = async () => {
     if (at < pages.length - 1) return setAt(at + 1); // already received: go forward
