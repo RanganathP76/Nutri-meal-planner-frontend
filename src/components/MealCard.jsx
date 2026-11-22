@@ -145,7 +145,10 @@ export default function MealCard({ meal, selected, onSelect, ageTable = false, c
   const suggestion = meal.addon?.meal ? meal.addon : null;
   const [local, setLocal] = useState(suggestion);
   const [picking, setPicking] = useState(false);
-  useEffect(() => { setLocal(suggestion); setPicking(false); /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, [suggestion?.meal?._id, meal._id]);
+  useEffect(() => {
+  setLocal(suggestion);
+  setPicking(false);
+}, [suggestion, meal._id]);
   const addon = controlled && selected ? addonValue : local;
   const setAddon = (a) => { setLocal(a); setPicking(false); if (controlled && selected) onAddonChange(a); };
   const canEdit = Boolean(addonOptions) && (!selected || controlled);

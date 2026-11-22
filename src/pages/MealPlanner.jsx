@@ -1,5 +1,5 @@
 import DaySuggestions from '../components/DaySuggestions';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { APP_SEED } from '../utils/seed';
 import { useSearchParams } from 'react-router-dom';
 import api, { errorMessage } from '../api/client';
@@ -42,8 +42,19 @@ export default function MealPlanner() {
   const lunchId = selected.lunch?._id;
   const dinnerId = selected.dinner?._id;
   // add-ons count with their meal, so the other slots are planned around both
-  const addonParams = Object.fromEntries(SLOTS.filter((k) => selected[k] && addons[k]?.meal?._id).map((k) => [`${k}AddonId`, addons[k].meal._id]));
-  const addonKey = JSON.stringify(addonParams);
+  const addonParams = useMemo(() => {
+  const selectedIds = {
+    breakfast: breakfastId,
+    lunch: lunchId,
+    dinner: dinnerId
+  };
+
+  return Object.fromEntries(
+    SLOTS
+      .filter((k) => selectedIds[k] && addons[k]?.meal?._id)
+      .map((k) => [`${k}AddonId`, addons[k].meal._id])
+  );
+}, [breakfastId, lunchId, dinnerId, addons]);
 
   // Load the list of cuisines for the filter dropdown
     useEffect(() => {
@@ -99,7 +110,7 @@ export default function MealPlanner() {
       })
       .finally(() => { if (!cancelled) setLoading(false); });
     return () => { cancelled = true; };
-  }, [slot, dietType, cuisine, date, breakfastId, lunchId, dinnerId, allergyKey, addonKey]);
+  }, [slot, dietType, cuisine, date, breakfastId, lunchId, dinnerId, allergyKey, addonParams]);
 
   // Pick (or un-pick) a meal, with the add-on shown on its card (or none). After a pick, move on to the next empty slot.
   const choose = (meal, addon = null) => {
