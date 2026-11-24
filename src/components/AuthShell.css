@@ -1,0 +1,27 @@
+.ashell { min-height: 100vh; min-height: 100dvh; display: grid; }
+.ashell-side { display: none; }
+.ashell-main { padding: calc(var(--safe-top) + 14px) 20px 40px; display: grid; align-content: start; gap: 18px; max-width: 480px; width: 100%; margin: 0 auto; }
+.ashell-back { display: inline-flex; align-items: center; gap: 4px; min-height: 44px; color: var(--muted); text-decoration: none; font-weight: 600; font-size: 14px; width: fit-content; }
+.ashell-form { display: grid; gap: 14px; }
+.ashell-mark { width: 56px; height: 56px; border-radius: 19px; background: var(--primary-dark); color: var(--accent); display: grid; place-items: center; }
+.ashell-form h1 { font-size: 34px; line-height: 1.05; letter-spacing: -.03em; }
+.ashell-sub { color: var(--muted); font-size: 15px; margin: -4px 0 4px; line-height: 1.5; }
+.ashell .switch { text-align: center; font-size: 15px; margin: 4px 0 0; }
+.ashell .switch a { color: var(--primary); font-weight: 700; text-decoration: none; }
+.ashell .legal { text-align: center; margin: 4px 0; line-height: 1.7; font-size: 13px; }
+.ashell .legal a { color: var(--primary); }
+.ref-applied { display: flex; align-items: center; gap: 8px; background: var(--primary-soft); color: var(--primary-deep); padding: 14px; border-radius: var(--radius-sm); font-size: 14px; }
+.google-wrap { margin: 8px 0 4px; display: flex; justify-content: center; }
+.consent { display: flex; align-items: flex-start; gap: 10px; font-size: 14px; line-height: 1.45; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 14px; }
+.consent input { width: 22px; height: 22px; min-height: 0; margin-top: 1px; flex: none; accent-color: var(--primary); }
+@media (min-width: 900px) {
+  .ashell { grid-template-columns: 1fr 1fr; }
+  .ashell-side { display: flex; flex-direction: column; justify-content: space-between; gap: 28px; padding: 32px 40px; background: var(--primary-dark); color: #fff; position: sticky; top: 0; height: 100vh; }
+  .ashell-brand { display: inline-flex; align-items: center; gap: 10px; font-family: var(--font-head); font-weight: 800; font-size: 21px; }
+  .ashell-brand em, .ashell-side em { font-style: normal; color: var(--accent); }
+  .ashell-brand .brand-mark { background: rgba(255, 255, 255, .12); }
+  .ashell-side h2 { color: #fff; font-size: 44px; line-height: 1.05; letter-spacing: -.03em; margin: 8px 0 12px; }
+  .ashell-side .ui-eyebrow { color: var(--accent); } .ashell-side p { color: #b9cdbf; }
+  .ashell-photo { height: 38vh; border-radius: 30px; }
+  .ashell-main { align-content: center; padding: 40px; }
+}

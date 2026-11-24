@@ -1,0 +1,25 @@
+/* Classes still used by screens that were not redesigned yet (onboarding, targets editor, legal pages).
+   They follow the design tokens, so they match the new look. */
+.card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 18px; box-shadow: var(--shadow-sm); }
+.btn { width: 100%; min-height: 50px; padding: 12px 18px; border: none; border-radius: var(--radius-sm); font-weight: 700; cursor: pointer; color: #fff; text-align: center; text-decoration: none; display: flex; align-items: center; justify-content: center; gap: 8px; transition: transform .1s ease, opacity .2s ease, background .2s; }
+.btn:active { transform: scale(.98); }
+.btn:disabled { opacity: .5; cursor: not-allowed; }
+.btn-primary, .btn-success { background: var(--primary); }
+.btn-primary:hover, .btn-success:hover { background: var(--primary-deep); }
+.btn-light { background: var(--primary-soft); color: var(--primary-deep); }
+.btn-danger { background: var(--danger-soft); color: var(--danger); }
+.btn-accent { background: var(--accent); color: var(--ink); }
+.tag { display: inline-block; font-size: 12px; padding: 3px 10px; background: var(--primary-soft); color: var(--primary-deep); border-radius: 999px; }
+.tag-green { background: #dcebdc; }
+.tag-amber { background: var(--warn-soft); color: var(--warn-ink); font-weight: 600; }
+.tag-red { background: var(--danger-soft); color: var(--danger); }
+.warn-list { margin: 0; padding-left: 18px; color: var(--warn-ink); font-size: 13px; }
+.picker-bar { display: flex; gap: 8px; }
+.picker-bar .btn { flex: 1; }
+.nut-group { margin-top: 10px; }
+.nut-table { width: 100%; font-size: 13px; border-collapse: collapse; }
+.nut-table td, .nut-table th { padding: 5px 0; border-bottom: 1px solid var(--border); }
+.nut-table td:last-child { text-align: right; }
+.nut-table th { font-size: 12px; font-weight: 600; text-align: right; color: var(--muted); }
+.nut-table .na { color: #a3aca6; }
+.micro-targets summary { cursor: pointer; }

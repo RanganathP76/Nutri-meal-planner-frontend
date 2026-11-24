@@ -1,12 +1,12 @@
 import { useEffect, useState } from 'react';
 import { Link, Navigate, useNavigate, useSearchParams } from 'react-router-dom';
-import { Leaf, Check } from 'lucide-react';
+import { Check } from 'lucide-react';
 import api, { errorMessage } from '../api/client';
 import { useAuth } from '../context/AuthContext';
 import { getPendingRef, setPendingRef, clearPendingRef } from '../utils/referral';
 import GoogleButton from '../components/GoogleButton';
 import { Button, Sheet } from '../ui/Kit';
-import './Auth.css';
+import AuthShell from '../components/AuthShell';
 
 const checkCode = async (code) => (await api.get('/users/referral-check', { params: { code } })).data.valid;
 
@@ -82,15 +82,12 @@ export default function Register() {
   };
 
   return (
-    <div className="auth">
-      <span className="auth-mark" aria-hidden="true"><Leaf size={26} /></span>
-      <h1>Create your account</h1>
-      <p className="sub">Meal plans that keep your nutrition balanced. One Google tap, no password.</p>
+    <AuthShell eyebrow="Welcome to FitRatio" title="Create your account" sub="Meal plans that keep your nutrition balanced. One Google tap, no password.">
 
       {refState === 'applied' && <div className="ref-applied"><Check size={18} aria-hidden="true" /> Referral code applied: <strong>{applied}</strong></div>}
       {refState === 'input' && (
         <div className="stack">
-          {linkInvalid && <p className="muted">The code in your link was not valid. You can enter another one if you have it.</p>}
+          {linkInvalid && <p className="ui-muted">The code in your link was not valid. You can enter another one if you have it.</p>}
           <input placeholder="Referral code (optional, enter before continuing)" value={typed} autoCapitalize="characters"
             onChange={(e) => setTyped(e.target.value)} />
         </div>
@@ -103,11 +100,11 @@ export default function Register() {
           <Link to="/disclaimer" target="_blank">Health Disclaimer</Link>, and I understand that nutrition values are estimates and not medical advice.
         </span>
       </label>
-      {!agreed && <p className="muted">Tick the box above to continue.</p>}
+      {!agreed && <p className="ui-muted">Tick the box above to continue.</p>}
       <GoogleButton onCredential={onCredential} text="signup_with" disabled={!agreed || busy || refState === 'checking'} />
-      {busy && <p className="muted" style={{ textAlign: 'center' }}>Please wait...</p>}
+      {busy && <p className="ui-muted" style={{ textAlign: 'center' }}>Please wait...</p>}
       {error && <p className="error-text" style={{ textAlign: 'center' }}>{error}</p>}
-      <p className="muted legal">We only use your Google name and email to create your account.</p>
+      <p className="ui-muted legal">We only use your Google name and email to create your account.</p>
       <p className="switch">Already registered? <Link to="/login">Log in</Link></p>
 
       <Sheet open={Boolean(pending)} onClose={() => setPending(null)} title="Referral code was invalid">
@@ -115,6 +112,6 @@ export default function Register() {
         <Button block onClick={continueWithout}>Continue without it</Button>
         <Button variant="ghost" block onClick={() => setPending(null)}>Cancel</Button>
       </Sheet>
-    </div>
+    </AuthShell>
   );
 }

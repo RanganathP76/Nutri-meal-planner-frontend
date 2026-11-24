@@ -1,11 +1,10 @@
 import { useState } from 'react';
 import { Link, Navigate, useNavigate } from 'react-router-dom';
-import { Leaf } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { errorMessage } from '../api/client';
 import GoogleButton from '../components/GoogleButton';
 import LegalLinks from '../components/LegalLinks';
-import './Auth.css';
+import AuthShell from '../components/AuthShell';
 
 export default function Login() {
   const { user, googleSignIn, notice } = useAuth();
@@ -29,17 +28,14 @@ export default function Login() {
   };
 
   return (
-    <div className="auth">
-      <span className="auth-mark" aria-hidden="true"><Leaf size={26} /></span>
-      <h1>Welcome back</h1>
-      <p className="sub">Log in with the Google account you registered with.</p>
+    <AuthShell eyebrow="Welcome back" title="Log in to FitRatio" sub="Use the Google account you registered with.">
       {notice && <p className="error-text">{notice}</p>}
       <GoogleButton onCredential={onCredential} text="signin_with" disabled={busy} />
-      {busy && <p className="muted" style={{ textAlign: 'center' }}>Signing you in...</p>}
+      {busy && <p className="ui-muted" style={{ textAlign: 'center' }}>Signing you in…</p>}
       {error && <p className="error-text" style={{ textAlign: 'center' }}>{error}</p>}
-      <p className="muted legal">Using a new phone or computer? Log in with the same Google account. Only one device can be logged in at a time, so your other device will be logged out.</p>
+      <p className="ui-muted legal">Using a new phone or computer? Log in with the same Google account. Only one device can be logged in at a time, so your other device will be logged out.</p>
       <LegalLinks />
       <p className="switch">New here? <Link to="/register">Create an account</Link></p>
-    </div>
+    </AuthShell>
   );
 }

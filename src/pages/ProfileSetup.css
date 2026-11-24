@@ -1,0 +1,15 @@
+.setup-back { justify-self: start; display: inline-flex; align-items: center; gap: 6px; background: none; border: 0; color: var(--primary-deep); font-weight: 700; font-size: 14px; padding: 6px 0; cursor: pointer; }
+.setup-card { align-content: start; }
+.setup-two { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.setup-note { font-size: 13px; color: var(--muted); margin: 0; }
+.setup-actions { display: flex; gap: 10px; }
+.setup-actions .ui-btn { flex: 1; }
+.setup-actions .ui-btn.ghost { flex: none; }
+.setup-consent { display: flex; gap: 10px; align-items: flex-start; font-size: 14px; }
+.setup-consent input { margin-top: 3px; }
+.setup-hero { display: grid !important; grid-template-columns: 1fr 1fr; gap: 14px; }
+.setup-hero div { display: grid; gap: 2px; align-content: start; }
+.setup-hero strong { font-family: var(--font-head); font-size: 26px; }
+.setup-hero span { font-size: 12px; opacity: .85; }
+.setup-hero p { grid-column: 1 / -1; font-size: 13px; opacity: .85; margin: 0; }
+.setup-card.plain { background: none; border: 0; box-shadow: none; padding: 0; }

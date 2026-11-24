@@ -1,5 +1,7 @@
 import { useState } from 'react';
+import { Scale } from 'lucide-react';
 import api, { errorMessage } from '../api/client';
+import { Button, Card, Field } from '../ui/Kit';
 
 // Asks the customer for their weight again every 30 days (a reminder from day 15), so the plan stays right.
 //  base      '/gym' or '/individual'
@@ -35,20 +37,20 @@ export default function CheckinCard({ base, checkin, weightKg, onDone, always = 
   };
 
   return (
-    <div className={`card stack ${checkin.state === 'overdue' ? 'warn' : ''}`}>
-      <strong>{title}</strong>
-      {result ? <p className={result.onTrack ? 'success-text' : 'muted'}>{result.note}</p> : <p className="muted">{text}</p>}
-      {!open && <button type="button" className="btn btn-primary" onClick={() => setOpen(true)}>Update my weight</button>}
+    <Card cream className={`checkin ${checkin.state === 'overdue' ? 'overdue' : ''}`}>
+      <div className="checkin-head"><span className="checkin-ico"><Scale size={20} aria-hidden="true" /></span><strong>{title}</strong></div>
+      {result ? <p className={result.onTrack ? 'success-text' : 'ui-muted'}>{result.note}</p> : <p className="ui-muted">{text}</p>}
+      {!open && !result && <Button small onClick={() => setOpen(true)}>Update my weight</Button>}
       {open && (
         <form className="stack" onSubmit={save}>
-          <label>Weight today (kg)<input type="number" step="0.1" min="30" max="250" required value={w} onChange={(e) => setW(e.target.value)} /></label>
+          <Field label="Weight today (kg)"><input type="number" step="0.1" min="30" max="250" required value={w} onChange={(e) => setW(e.target.value)} /></Field>
           {error && <p className="error-text">{error}</p>}
-          <div className="picker-bar">
-            <button type="button" className="btn btn-light" onClick={() => setOpen(false)}>Cancel</button>
-            <button className="btn btn-success" disabled={busy}>{busy ? 'Saving...' : 'Save weight'}</button>
+          <div className="two-btn">
+            <Button variant="ghost" onClick={() => setOpen(false)}>Cancel</Button>
+            <button className="ui-btn primary" disabled={busy}>{busy ? 'Saving…' : 'Save weight'}</button>
           </div>
         </form>
       )}
-    </div>
+    </Card>
   );
 }

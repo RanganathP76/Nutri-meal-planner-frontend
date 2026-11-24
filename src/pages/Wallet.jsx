@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { Share2, Copy, ArrowDownToLine, ArrowUpRight, ArrowDownLeft, Inbox } from 'lucide-react';
 import api, { errorMessage } from '../api/client';
 import ReferralList from '../components/ReferralList';
-import { Button, Card, Chip, Empty, Field, Segmented, Skeleton, useFeedback } from '../ui/Kit';
+import { Button, Card, Chip, Empty, ErrorState, Field, Segmented, Skeleton, useFeedback } from '../ui/Kit';
 import './Wallet.css';
 
 const rupees = (n) => `₹${Number(n).toLocaleString('en-IN', { maximumFractionDigits: 2 })}`;
@@ -84,7 +84,7 @@ export default function Wallet() {
     return undefined;
   };
 
-  if (!wallet) return error ? <p className="error-text">{error}</p> : <div className="stack"><Skeleton height={190} /><Skeleton /></div>;
+  if (!wallet) return error ? <ErrorState title="Could not load your wallet" text={error} onRetry={() => { setError(''); load(); }} /> : <div className="stack"><Skeleton height={190} /><Skeleton /></div>;
 
   const openOne = wallet.withdrawals.find((w) => w.open);
   const canRequest = wallet.rules.enabled && !openOne;
