@@ -49,7 +49,7 @@ export default function PlannerView({ kind }) {
   const [openMeal, setOpenMeal] = useState(null);
   const [sheet, setSheet] = useState(''); // '', 'balance', 'day', 'complete', 'allergy'
 
-  const steps = meta?.steps || [];
+  const steps = useMemo(() => meta?.steps || [], [meta?.steps]);
   const keyOf = useCallback((p, a) => JSON.stringify(adapter.saveBody(p, a)), [adapter]);
 
   // Plan profile (Gym and Individual). Without one, go and set it up.
