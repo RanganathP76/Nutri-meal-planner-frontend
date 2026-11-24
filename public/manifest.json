@@ -22,13 +22,13 @@
       "purpose": "any"
     },
     {
-      "src": "logo512.png",
+      "src": "logo-maskable.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "maskable"
     }
   ],
-  "start_url": ".",
+  "start_url": "/",
   "scope": "/",
   "display": "standalone",
   "orientation": "portrait",
