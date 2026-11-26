@@ -4,7 +4,8 @@ import { Lock, Plus, ShieldAlert, SlidersHorizontal, Sparkles, X } from 'lucide-
 import api, { errorMessage } from '../api/client';
 import { APP_SEED } from '../utils/seed';
 import { addDays, todayKey } from '../utils/date';
-import { Button, ChoiceChips, Card, IconButton, Photo, Ring, Segmented, Skeleton, useFeedback } from '../ui/Kit';
+import { Button, ChoiceChips, Card, IconButton, Photo, PhotoStack, Ring, Segmented, Skeleton, useFeedback } from '../ui/Kit';
+import { balanceOf } from '../utils/balance';
 import CheckinCard from '../components/CheckinCard';
 import MealBrowse from '../components/MealBrowse';
 import TargetsEditor from '../components/TargetsEditor';
@@ -14,6 +15,7 @@ import MealStage from './MealStage';
 import MealSheet from './MealSheet';
 import { AllergySheet, BalanceSheet, CompleteDaySheet, FullDaySheet } from './Sheets';
 import './planner.css';
+import './planner2.css';
 
 const ZERO = { calories: 0, protein: 0, carbohydrates: 0, fat: 0, fiber: 0 };
 const CONDITION_NAMES = { diabetes: 'diabetes', hypertension_bp: 'blood pressure', thyroid: 'thyroid', high_cholesterol: 'high cholesterol' };
@@ -47,7 +49,7 @@ export default function PlannerView({ kind }) {
   const [needsPlan, setNeedsPlan] = useState(false);
   const [saving, setSaving] = useState(false);
   const [openMeal, setOpenMeal] = useState(null);
-  const [sheet, setSheet] = useState(''); // '', 'balance', 'day', 'complete', 'allergy'
+  const [sheet, setSheet] = useState(params.get('sheet') === 'day' ? 'day' : ''); // '', 'balance', 'day', 'complete', 'allergy'
 
   const steps = useMemo(() => meta?.steps || [], [meta?.steps]);
   const keyOf = useCallback((p, a) => JSON.stringify(adapter.saveBody(p, a)), [adapter]);
@@ -119,8 +121,8 @@ export default function PlannerView({ kind }) {
 
   const fetchMore = useCallback((extra) => api.get(adapter.recsUrl, { params: { ...JSON.parse(recsKey), ...extra } }).then((r) => r.data), [adapter, recsKey]);
 
-  const addonFor = (id) => addons.find((a) => a.target === id);
-  const asAddon = (a) => (a ? { meal: a.meal || { _id: a.mealId, name: a.name, imageUrl: a.imageUrl }, reason: a.reason } : null);
+  const addonsFor = (id) => addons.filter((a) => a.target === id);
+  const asAddon = (a) => ({ meal: { ...(a.meal || {}), _id: a.mealId, name: a.meal?.name || a.name, imageUrl: a.meal?.imageUrl || a.imageUrl }, reason: a.reason });
 
   const nextEmpty = (next, from) => {
     const ids = steps.map((s) => s.id);
@@ -128,15 +130,15 @@ export default function PlannerView({ kind }) {
     return [...ids.slice(i + 1), ...ids.slice(0, i)].find((id) => !next[id]);
   };
 
-  // Put a meal (and its add-on, if any) on the plate of the open step
-  const pick = (meal, addon) => {
+  // Put a meal (and its add-ons, if any) on the plate of the open step. The add-ons given here replace the step's old ones.
+  const pick = (meal, addonList = []) => {
     const had = Boolean(picks[stepId]);
     const next = { ...picks, [stepId]: meal };
     setPicks(next);
     setAddons((list) => {
-      const keep = kind === 'basic' || addon?.meal ? list.filter((a) => a.target !== stepId) : list;
-      if (!addon?.meal) return keep;
-      return [...keep.filter((a) => a.mealId !== addon.meal._id), { mealId: addon.meal._id, name: addon.meal.name, imageUrl: addon.meal.imageUrl, target: stepId, targetLabel: targetLabel(steps, stepId), meal: addon.meal, reason: addon.reason }];
+      const given = addonList.filter((a) => a?.meal);
+      const keep = list.filter((a) => a.target !== stepId && !given.some((g) => g.meal._id === a.mealId));
+      return [...keep, ...given.map((a) => ({ mealId: a.meal._id, name: a.meal.name, imageUrl: a.meal.imageUrl, target: stepId, targetLabel: targetLabel(steps, stepId), meal: a.meal, reason: a.reason }))];
     });
     setOpenMeal(null);
     if (!had) {
@@ -151,14 +153,14 @@ export default function PlannerView({ kind }) {
     setOpenMeal(null);
   };
 
-  const quick = (meal) => (picks[stepId]?._id === meal._id ? unpick() : pick(meal, meal.addon?.meal ? meal.addon : null));
+  const quick = (meal) => (picks[stepId]?._id === meal._id ? unpick() : pick(meal, meal.addon?.meal ? [meal.addon] : kind === 'basic' ? [] : addonsFor(stepId).map(asAddon)));
 
   // "Add this to my day" from a ready-made day
   const addDayAddon = (food) => {
     const best = food.addon?.bestTarget;
     let target;
     if (kind === 'basic') {
-      target = steps.some((s) => s.id === best) && picks[best] ? best : steps.map((s) => s.id).find((k) => picks[k] && !addonFor(k));
+      target = steps.some((s) => s.id === best) && picks[best] ? best : steps.map((s) => s.id).find((k) => picks[k] && !addonsFor(k).length);
       if (!target) { notify('Pick a meal first, then add the extra food to it.', 'bad'); return; }
     } else target = best || 'extra';
     setAddons((list) => [...list.filter((a) => a.mealId !== food._id && (kind !== 'basic' || a.target !== target)), { mealId: food._id, name: food.name, imageUrl: food.imageUrl, target, targetLabel: targetLabel(steps, target), meal: food, reason: food.addon?.reason }]);
@@ -207,6 +209,7 @@ export default function PlannerView({ kind }) {
   const targets = info?.daily?.targets || meta.targets;
   const eaten = info?.daily?.eaten || ZERO;
   const kcalPct = targets?.calories ? (eaten.calories / targets.calories) * 100 : 0;
+  const bal = balanceOf(eaten.calories, targets?.calories);
   const conditions = (meta.profile?.healthConditions || []).map((c) => CONDITION_NAMES[c]).filter(Boolean);
   const ideal = info?.idealForStep || info?.idealForSlot;
   const picksParam = Object.entries(picks).filter(([, m]) => m).map(([k, m]) => `${k}:${m._id}`).join(',');
@@ -218,12 +221,12 @@ export default function PlannerView({ kind }) {
     <div className="pv">
       <header className="pv-head">
         <div>
-          <p className="ui-eyebrow">{date === today ? 'Today' : 'Planning ahead'}</p>
-          <h1 className="pv-title">Build your <em>day</em></h1>
+          <h1 className="pv-title">Plan your <em>day</em></h1>
+          <p className="pv-sub">{date === today ? 'Today' : 'Planning ahead'} · pick a meal for each slot</p>
         </div>
         <div className="pv-tools">
-          {kind === 'basic' && <IconButton label="Food allergies" onClick={() => setSheet('allergy')}><ShieldAlert size={20} /></IconButton>}
-          <IconButton label="Ready-made day" onClick={() => setSheet('day')}><Sparkles size={20} /></IconButton>
+          {kind === 'basic' && <IconButton label="Food allergies" onClick={() => setSheet('allergy')}><ShieldAlert size={19} /></IconButton>}
+          <IconButton label="Ready-made day" onClick={() => setSheet('day')}><Sparkles size={19} /></IconButton>
         </div>
       </header>
 
@@ -231,28 +234,25 @@ export default function PlannerView({ kind }) {
 
       {kind !== 'basic' && <CheckinCard base={adapter.base} checkin={meta.checkin} weightKg={meta.profile.weightKg} onDone={(data) => { setMeta((m) => ({ ...m, ...data })); setBump((n) => n + 1); }} />}
 
-      <section className="plates" aria-label="Meals of the day">
-        <div className="plates-row">
+      <section aria-label="Meals of the day">
+        <div className="slots">
           {steps.map((s) => {
             const m = picks[s.id];
-            const a = addonFor(s.id);
+            const adds = addonsFor(s.id);
             const Icon = stepIcon(s.id);
             return (
-              <button key={s.id} type="button" className={`plate${stepId === s.id ? ' on' : ''}${m ? ' full' : ''}`} aria-pressed={stepId === s.id} onClick={() => setStepId(s.id)}>
-                {m ? <Photo src={m.imageUrl} alt="" className="plate-photo" iconSize={20} /> : <span className="plate-photo empty"><Icon size={22} aria-hidden="true" /></span>}
-                <span className="plate-text">
-                  <small>{s.label}</small>
-                  <b>{m ? m.name : 'Choose'}</b>
-                  {m && a && <em>+ {a.name}</em>}
-                </span>
+              <button key={s.id} type="button" className={`slot${stepId === s.id ? ' on' : ''}${m ? ' full' : ''}`} aria-pressed={stepId === s.id} onClick={() => setStepId(s.id)}>
+                {m ? <Photo src={m.imageUrl} alt="" className="slot-photo" iconSize={18} /> : <span className="slot-photo empty"><Icon size={18} aria-hidden="true" /></span>}
+                <span className="slot-text"><small>{s.label}</small><b>{m ? m.name : 'Choose'}</b></span>
+                {m && adds.length > 0 && <PhotoStack items={adds.map((a) => ({ name: a.name, imageUrl: a.imageUrl }))} size={20} max={2} />}
               </button>
             );
           })}
         </div>
         {extras.length > 0 && (
-          <div className="extras">
+          <div className="slot-extras">
             {extras.map((a) => (
-              <span key={a.mealId} className="extra-chip">+ {a.name}<button type="button" aria-label={`Remove ${a.name}`} onClick={() => setAddons((l) => l.filter((x) => x.mealId !== a.mealId))}><X size={14} /></button></span>
+              <span key={a.mealId} className="extra-chip"><PhotoStack items={[{ name: a.name, imageUrl: a.imageUrl }]} size={22} />{a.name}<button type="button" aria-label={`Remove ${a.name}`} onClick={() => setAddons((l) => l.filter((x) => x.mealId !== a.mealId))}><X size={13} /></button></span>
             ))}
           </div>
         )}
@@ -266,8 +266,7 @@ export default function PlannerView({ kind }) {
       {step && (
         <div className="pv-step">
           <h2>{step.label || title(step.id)}</h2>
-          {step.hint && <p className="ui-muted">{step.hint}</p>}
-          {ideal && <p className="ui-muted">Best for this meal: about {ideal.calories} kcal and {ideal.protein} g protein.</p>}
+          {ideal && <p>Best: about {ideal.calories} kcal, {ideal.protein} g protein</p>}
         </div>
       )}
 
@@ -305,12 +304,12 @@ export default function PlannerView({ kind }) {
       {!needsPlan && (
         <div className="dock" role="region" aria-label="Day summary">
           <button type="button" className="dock-sum" onClick={() => setSheet('balance')} aria-label="Open today's balance">
-            <Ring value={kcalPct} size={52} stroke={6} label={`${Math.min(999, Math.round(kcalPct))}%`} labelSize={13} />
+            <Ring value={Math.min(100, kcalPct)} size={46} stroke={5} label={plannedCount ? bal.label.split(' ')[0].slice(0, 5) : '–'} labelSize={11} />
             <span>
-              <b>{Math.round(eaten.calories)}{targets ? ` / ${Math.round(targets.calories)}` : ''} kcal</b>
-              <small>{plannedCount} of {steps.length} meals planned</small>
+              <b>{plannedCount ? bal.label : 'Not planned'}{bal.percent > 0 && <small className="dock-pct"> {bal.percent}%</small>}</b>
+              <small>{Math.round(eaten.calories)}{targets ? ` of ${Math.round(targets.calories)}` : ''} kcal · {plannedCount} of {steps.length} meals</small>
             </span>
-            <SlidersHorizontal size={18} aria-hidden="true" />
+            <SlidersHorizontal size={17} aria-hidden="true" />
           </button>
           <Button onClick={save} disabled={saving || !dirty}>{saving ? 'Saving…' : !dirty && hadSaved ? 'Saved ✓' : plannedCount ? 'Save day' : hadSaved ? 'Clear day' : 'Save day'}</Button>
         </div>
@@ -321,8 +320,10 @@ export default function PlannerView({ kind }) {
         meal={openMeal}
         stepLabel={step?.label || ''}
         picked={Boolean(openMeal && picks[stepId]?._id === openMeal._id)}
-        currentAddon={asAddon(addonFor(stepId))}
+        currentAddons={addonsFor(stepId).map(asAddon)}
         addonOptions={kind === 'basic' ? { slot: stepId, dietType } : null}
+        maxAddons={kind === 'basic' ? 1 : 3}
+        onMoreAddons={kind === 'basic' ? null : () => { setOpenMeal(null); setSheet('complete'); }}
         onPick={pick}
         onRemove={() => unpick()}
         onClose={() => setOpenMeal(null)}

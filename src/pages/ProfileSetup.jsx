@@ -100,7 +100,12 @@ export default function ProfileSetup({ kind }) {
     }
   };
 
-  const merge = (data) => setResult((r) => ({ ...r, ...data }));
+  // After the target weight or the weight check-in changes, the server may have changed the goal too.
+  // The form must start from the saved values, or "Edit my details" would save the old goal and target back.
+  const merge = (data) => {
+    setResult((r) => ({ ...r, ...data }));
+    if (data?.profile) setF((o) => ({ ...fromProfile(kind, data.profile), acceptedNotice: o.acceptedNotice }));
+  };
   const startEdit = () => { setStep(0); setError(''); setEditing(true); };
 
   if (loading) return <PageSkeleton variant="form" label="Loading your profile" />;
@@ -123,7 +128,7 @@ export default function ProfileSetup({ kind }) {
           <p>Your body uses about {Math.round(t.bmr)} kcal at rest. Method: {t.method}.</p>
         </Card>
         <Link to="/planner" className="ui-btn primary block">Start planning my meals <ArrowRight size={18} aria-hidden="true" /></Link>
-        <CheckinCard always base={cfg.base} checkin={result.checkin} weightKg={result.profile.weightKg} onDone={(data) => { merge(data); setF((o) => ({ ...o, weightKg: String(data.profile.weightKg), goal: data.profile.goal })); }} />
+        <CheckinCard always base={cfg.base} checkin={result.checkin} weightKg={result.profile.weightKg} onDone={merge} />
         <BodySummary body={result.body} base={cfg.base} onChanged={merge} />
         <TargetsEditor details={result.details} base={cfg.base} onChanged={merge} />
         <MicroTargets micro={result.micro} />

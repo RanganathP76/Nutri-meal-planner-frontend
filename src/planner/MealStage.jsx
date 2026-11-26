@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { ArrowLeft, Check, RefreshCw, Search, X, Flame } from 'lucide-react';
+import { ArrowLeft, Check, Flame, Info, RefreshCw, Search, X } from 'lucide-react';
 import { Photo, Button, IconButton } from '../ui/Kit';
 
 // The server ranks every suitable meal but sends only 3 at a time, so the phone never holds the whole list.
@@ -9,30 +9,47 @@ import { Photo, Button, IconButton } from '../ui/Kit';
 //  resetKey   changes when the slot, diet, cuisine or date changes, so we start again at the top 3
 const SIZE = 3;
 
+// Share of the meal's energy that comes from protein, carbs and fat (4, 4 and 9 kcal a gram). Display only.
+function macroSplit(n) {
+  const p = (n.protein || 0) * 4; const c = (n.carbohydrates || 0) * 4; const f = (n.fat || 0) * 9;
+  const t = p + c + f || 1;
+  return [['P', 'Protein', n.protein, (p / t) * 100], ['C', 'Carbs', n.carbohydrates, (c / t) * 100], ['F', 'Fat', n.fat, (f / t) * 100]];
+}
+
 export function MealCard({ meal, picked, onOpen, onQuick, recent }) {
   const rec = meal.recommendation;
   const n = meal.nutritionPerServing || {};
+  const add = meal.addon?.meal;
   return (
-    <article className={`mcard${picked ? ' picked' : ''}`}>
-      <button type="button" className="mcard-photo" onClick={() => onOpen(meal)} aria-label={`Details for ${meal.name}`}>
+    <article className={`mc${picked ? ' picked' : ''}`}>
+      <button type="button" className="mc-hero" onClick={() => onOpen(meal)} aria-label={`Details for ${meal.name}`}>
         <Photo src={meal.imageUrl} alt={meal.name} iconSize={40} />
-        {rec?.fit && <span className="mcard-fit">{rec.fit}</span>}
-        {picked && <span className="mcard-check" aria-hidden="true"><Check size={18} /></span>}
-        {meal.addon?.meal && <span className="mcard-plus">+ {meal.addon.meal.name}</span>}
+        <span className="mc-shade" aria-hidden="true" />
+        {rec?.fit && <span className="mc-fit">{rec.fit}</span>}
+        {picked && <span className="mc-check" aria-hidden="true"><Check size={16} /></span>}
+        <span className="mc-title"><b>{meal.name}</b><small>{meal.cuisine}{meal.digestiveProfile?.digestiveLoad ? ` · ${meal.digestiveProfile.digestiveLoad} to digest` : ''}</small></span>
       </button>
-      <div className="mcard-body">
-        <h3 onClick={() => onOpen(meal)}>{meal.name}</h3>
-        <p className="mcard-sub">{meal.cuisine}{meal.digestiveProfile?.digestiveLoad ? ` · ${meal.digestiveProfile.digestiveLoad} to digest` : ''}</p>
-        <div className="mcard-stats">
-          <span><Flame size={14} aria-hidden="true" /><b>{Math.round(n.calories || 0)}</b> kcal</span>
-          <span><b>{Math.round(n.protein || 0)}g</b> protein</span>
-          <span><b>{Math.round(n.carbohydrates || 0)}g</b> carbs</span>
+      <div className="mc-body">
+        <div className="mc-row">
+          <span className="mc-kcal"><Flame size={15} aria-hidden="true" /><strong>{Math.round(n.calories || 0)}</strong><small>kcal</small></span>
+          <span className="mc-split" role="img" aria-label={`Protein ${Math.round(n.protein || 0)} g, carbs ${Math.round(n.carbohydrates || 0)} g, fat ${Math.round(n.fat || 0)} g`}>
+            {macroSplit(n).map(([k, , , w]) => <i key={k} className={`m${k}`} style={{ flexGrow: Math.max(w, 6) }} />)}
+          </span>
         </div>
+        <div className="mc-legend">
+          {macroSplit(n).map(([k, label, g]) => <span key={k}><i className={`m${k}`} />{label} <b>{Math.round(g || 0)}g</b></span>)}
+        </div>
+        {add && (
+          <span className="mc-addon">
+            <Photo src={add.imageUrl} alt="" className="mc-addon-photo" iconSize={14} />
+            <span><small>Add-on</small><b>{add.name}</b></span>
+          </span>
+        )}
         {recent && <span className="ui-chip warn">Made in the last 3 days</span>}
-        {rec?.reason && <p className="mcard-reason">{rec.reason}</p>}
-        <div className="mcard-actions">
-          <Button variant="ghost" small onClick={() => onOpen(meal)}>Details</Button>
-          <Button variant={picked ? 'soft' : 'primary'} small onClick={() => onQuick(meal)}>{picked ? <><Check size={16} aria-hidden="true" /> Picked</> : 'Pick'}</Button>
+        {rec?.reason && <p className="mc-reason">{rec.reason}</p>}
+        <div className="mc-actions">
+          <button type="button" className="mc-info" onClick={() => onOpen(meal)} aria-label={`Details for ${meal.name}`}><Info size={18} aria-hidden="true" /></button>
+          <Button variant={picked ? 'soft' : 'primary'} small onClick={() => onQuick(meal)}>{picked ? <><Check size={16} aria-hidden="true" /> Picked</> : add ? 'Pick with add-on' : 'Pick'}</Button>
         </div>
       </div>
     </article>

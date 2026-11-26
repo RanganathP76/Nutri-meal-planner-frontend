@@ -6,7 +6,7 @@ import './styles/legacy.css';
 
 import App from './App';
 import NutriGapSplash from './components/NutriGapSplash';
-
+import './styles/glass.css'; // after App so it overrides every component stylesheet
 import { captureReferral } from './utils/referral';
 
 captureReferral();

@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react';
-import { Check, Minus, Pencil, Plus } from 'lucide-react';
+import { Check, Plus, X } from 'lucide-react';
 import api, { errorMessage } from '../api/client';
 import { DISEASE_LABEL, RATING_LABEL, NUTRIENT_GROUPS, NUTRIENT_GROUP_TITLES } from '../utils/health';
-import { Button, Chip, PageSkeleton, Photo, Segmented, Sheet } from '../ui/Kit';
+import { Button, Chip, PageSkeleton, Photo, PhotoStack, Segmented, Sheet } from '../ui/Kit';
 import { combineDetailed, combineNutrition } from './mealHelpers';
 
 // Basic plan: portions are shown by age. Two tables, loaded only when opened.
@@ -32,8 +32,8 @@ function AgePortions({ mealId }) {
   );
 }
 
-// Choose another add-on for a Basic meal
-function AddonOptions({ meal, options, current, onPick }) {
+// Basic plan: the add-ons that go with this meal, as small photo cards. Loaded only when opened.
+function AddonOptions({ meal, options, chosenIds, onPick }) {
   const [list, setList] = useState(null);
   const [error, setError] = useState('');
   useEffect(() => {
@@ -43,15 +43,16 @@ function AddonOptions({ meal, options, current, onPick }) {
       .catch((err) => { if (!off) setError(errorMessage(err)); });
     return () => { off = true; };
   }, [meal._id, options.slot, options.dietType]);
+  if (error) return <p className="error-text">{error}</p>;
+  if (!list) return <PageSkeleton label="Loading add-ons" />;
+  if (list.length === 0) return <p className="ui-muted">No add-on is available for this meal right now.</p>;
   return (
-    <div className="stack">
-      {error && <p className="error-text">{error}</p>}
-      {!list && !error && <PageSkeleton label="Loading meals" />}
-      {list && list.length === 0 && <p className="ui-muted">No add-on is available for this meal right now.</p>}
-      {(list || []).map((o) => (
-        <button key={o.meal._id} type="button" className={`addon-opt${current?.meal?._id === o.meal._id ? ' current' : ''}`} onClick={() => onPick({ meal: o.meal })}>
+    <div className="addon-opts">
+      {list.map((o) => (
+        <button key={o.meal._id} type="button" className={`addon-opt${chosenIds.includes(o.meal._id) ? ' current' : ''}`} onClick={() => onPick({ meal: o.meal })}>
           <Photo src={o.meal.imageUrl} alt={o.meal.name} className="addon-opt-photo" iconSize={20} />
-          <span><strong>{o.meal.name}</strong><small>{Math.round(o.meal.nutritionPerServing.calories)} kcal, {o.meal.nutritionPerServing.protein} g protein. Together {Math.round(o.combined.calories)} kcal.</small></span>
+          <strong>{o.meal.name}</strong>
+          <small>{Math.round(o.meal.nutritionPerServing.calories)} kcal · together {Math.round(o.combined.calories)}</small>
           <Chip tone={o.fits ? '' : 'warn'}>{o.fits ? (o.fills.length ? 'Fills a gap' : 'Fits') : 'A bit big'}</Chip>
         </button>
       ))}
@@ -84,36 +85,45 @@ function ScoreDetails({ d }) {
 const Fold = ({ title, children }) => <details className="fold"><summary>{title}</summary><div className="fold-body">{children}</div></details>;
 
 // Everything about one meal, with the pick button at the bottom.
-//  meal, stepLabel      the meal and the plate it would go on
-//  picked               is this meal already in the plan for this step
-//  currentAddon         the add-on now in the plan for this step (if picked)
-//  addonOptions         { slot, dietType } on Basic, where the customer can choose another add-on
-//  onPick(meal, addon)  put it on the plate;  onRemove() take it off
-export default function MealSheet({ meal, stepLabel, picked, currentAddon, addonOptions, onPick, onRemove, onClose }) {
+//  meal, stepLabel         the meal and the plate it would go on
+//  picked                  is this meal already in the plan for this step
+//  currentAddons           the add-ons now in the plan for this step: [{ meal, reason }]
+//  addonOptions            { slot, dietType } on Basic, where the customer picks the add-on from a list
+//  maxAddons               1 on Basic, 3 on Gym and Individual
+//  onMoreAddons            Gym and Individual: opens "Complete your day" for more add-on ideas
+//  onPick(meal, addons)    put it on the plate;  onRemove() take it off
+export default function MealSheet({ meal, stepLabel, picked, currentAddons = [], addonOptions, maxAddons = 1, onMoreAddons, onPick, onRemove, onClose }) {
   const suggestion = meal?.addon?.meal ? meal.addon : null;
-  const [addon, setAddon] = useState(null);
+  const startList = picked ? currentAddons : suggestion ? [suggestion] : [];
+  const [list, setList] = useState(startList);
   const [choosing, setChoosing] = useState(false);
   const mealId = meal?._id;
-  const startAddon = picked ? currentAddon : suggestion;
 
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  useEffect(() => { setAddon(startAddon || null); setChoosing(false); }, [mealId]);
+  useEffect(() => { setList(startList); setChoosing(false); }, [mealId]);
 
   if (!meal) return null;
   const rec = meal.recommendation;
-  const n = addon ? combineNutrition(meal.nutritionPerServing, addon.meal.nutritionPerServing) : (meal.nutritionPerServing || {});
-  const detailed = addon ? combineDetailed(meal.detailedNutrition, addon.meal.detailedNutrition) : meal.detailedNutrition;
-  const changed = picked && (addon?.meal?._id || null) !== (currentAddon?.meal?._id || null);
+  const n = list.reduce((sum, a) => combineNutrition(sum, a.meal.nutritionPerServing), meal.nutritionPerServing || {});
+  const detailed = list.reduce((sum, a) => combineDetailed(sum, a.meal.detailedNutrition), meal.detailedNutrition);
+  const ids = (l) => l.map((a) => a.meal._id).sort().join(',');
+  const changed = picked && ids(list) !== ids(currentAddons);
+  const have = list.length > 0;
+  const canAdd = list.length < maxAddons;
+  const chosenIds = list.map((a) => a.meal._id);
+  const nameOf = (a) => a.meal.name || 'Add-on';
 
   const footer = picked && !changed
     ? <Button variant="danger" block onClick={onRemove}>Remove from {stepLabel}</Button>
-    : <Button block onClick={() => onPick(meal, addon)}>{picked ? 'Update this plate' : addon ? `Add to ${stepLabel} with add-on` : `Add to ${stepLabel}`}</Button>;
+    : <Button block onClick={() => onPick(meal, list)}>{picked ? 'Update this plate' : have ? `Add to ${stepLabel} with ${list.length === 1 ? 'add-on' : `${list.length} add-ons`}` : `Add to ${stepLabel}`}</Button>;
+
+  const addFromSuggestion = () => { if (suggestion && !chosenIds.includes(suggestion.meal._id)) setList([...list, suggestion]); setChoosing(false); };
 
   return (
     <Sheet open onClose={onClose} title={meal.name} footer={footer}>
       <div className="msheet-photos">
         <Photo src={meal.imageUrl} alt={meal.name} className="msheet-photo" iconSize={48} />
-        {addon && <><span className="msheet-plus" aria-hidden="true">+</span><Photo src={addon.meal.imageUrl} alt={addon.meal.name} className="msheet-photo" iconSize={48} /></>}
+        {have && <span className="msheet-addons"><PhotoStack items={list.map((a) => ({ name: nameOf(a), imageUrl: a.meal.imageUrl }))} size={30} max={3} /> {list.length === 1 ? '+ add-on' : `+ ${list.length} add-ons`}</span>}
       </div>
       <div className="chips-wrap">
         {rec?.fit && <Chip>{rec.fit}</Chip>}
@@ -122,8 +132,8 @@ export default function MealSheet({ meal, stepLabel, picked, currentAddon, addon
         {meal.madeInLast3Days && <Chip tone="warn">Made in the last 3 days</Chip>}
         {(meal.healthLabels || []).map((l) => <Chip key={l.disease} tone={l.verdict === 'good' ? '' : 'bad'}>{l.verdict === 'good' ? '✓' : '✕'} {l.text}</Chip>)}
       </div>
-      {rec?.reason && !addon && <p className="msheet-reason">{rec.reason}</p>}
-      {addon?.reason && <p className="msheet-reason">{addon.reason}</p>}
+      {rec?.reason && !have && <p className="msheet-reason">{rec.reason}</p>}
+      {list[0]?.reason && <p className="msheet-reason">{list[0].reason}</p>}
 
       <div className="macro-grid">
         <div><b>{Math.round(n.calories || 0)}</b><span>kcal</span></div>
@@ -131,25 +141,37 @@ export default function MealSheet({ meal, stepLabel, picked, currentAddon, addon
         <div><b>{n.carbohydrates}g</b><span>carbs</span></div>
         <div><b>{n.fat}g</b><span>fat</span></div>
       </div>
-      <p className="ui-muted">{addon ? 'Nutrients are for the meal and add-on together. ' : ''}Numbers are estimates, not medical advice.</p>
+      <p className="ui-muted">{have ? 'Nutrients are for the meal and its add-ons together. ' : ''}Numbers are estimates, not medical advice.</p>
 
-      {(suggestion || addonOptions) && (
-        <div className="addon-box">
-          {addon ? (
-            <div className="addon-row">
-              <span><Chip>✓ Add-on included</Chip> <strong>{addon.meal.name}</strong></span>
-              <span className="addon-actions">
-                {addonOptions && <button type="button" className="ui-icon-btn" aria-label="Choose another add-on" onClick={() => setChoosing(!choosing)}><Pencil size={16} /></button>}
-                <button type="button" className="ui-icon-btn" aria-label="Remove the add-on" onClick={() => { setAddon(null); setChoosing(false); }}><Minus size={16} /></button>
+      {(have || suggestion || addonOptions || onMoreAddons) && (
+        <section className="addon-flow" aria-label="Add-ons">
+          <header><h4>Add-on{maxAddons > 1 ? 's' : ''}</h4><small>optional, a small food that completes this meal</small></header>
+          {list.map((a) => (
+            <div key={a.meal._id} className="addon-item">
+              <Photo src={a.meal.imageUrl} alt={nameOf(a)} className="ph" iconSize={20} />
+              <span>
+                <b>{nameOf(a)}</b>
+                <small>{a.meal.nutritionPerServing ? `${Math.round(a.meal.nutritionPerServing.calories)} kcal · ${a.meal.nutritionPerServing.protein} g protein` : 'Added to this meal'}{a.meal.portionText ? ` · ${a.meal.portionText}` : ''}</small>
               </span>
+              <button type="button" className="ui-icon-btn" aria-label={`Remove ${nameOf(a)}`} onClick={() => setList(list.filter((x) => x.meal._id !== a.meal._id))}><X size={16} /></button>
             </div>
-          ) : (
-            <button type="button" className="addon-add" onClick={() => (addonOptions ? setChoosing(true) : setAddon(suggestion))}>
-              <span className="ui-icon-btn"><Plus size={16} /></span> Add a small food to complete this meal
+          ))}
+          {(canAdd || (maxAddons === 1 && addonOptions)) && !choosing && (
+            <button type="button" className="addon-add" onClick={() => (addonOptions ? setChoosing(true) : suggestion && !chosenIds.includes(suggestion.meal._id) ? addFromSuggestion() : onMoreAddons?.())}>
+              <span className="plus"><Plus size={16} aria-hidden="true" /></span>
+              {have ? (maxAddons > 1 ? 'Add another add-on' : 'Change the add-on') : 'Add a small food to complete this meal'}
             </button>
           )}
-          {choosing && addonOptions && <AddonOptions meal={meal} options={addonOptions} current={addon} onPick={(a) => { setAddon(a); setChoosing(false); }} />}
-        </div>
+          {choosing && addonOptions && (
+            <>
+              <p className="addon-steps"><b>Tap one to add it.</b> You can remove it again before you add the meal to your plate.</p>
+              <AddonOptions meal={meal} options={addonOptions} chosenIds={chosenIds} onPick={(a) => { setList(maxAddons === 1 ? [a] : [...list.filter((x) => x.meal._id !== a.meal._id), a]); setChoosing(false); }} />
+            </>
+          )}
+          {onMoreAddons && !addonOptions && (
+            <button type="button" className="addon-more" onClick={onMoreAddons}>See more add-on ideas for your whole day</button>
+          )}
+        </section>
       )}
 
       {rec?.healthFlags?.length > 0 && (
@@ -174,7 +196,7 @@ export default function MealSheet({ meal, stepLabel, picked, currentAddon, addon
         <div className="plate-box">
           <strong>{meal.portion ? 'Your portion' : 'One serving'}</strong>
           <p>{meal.portionText || meal.components.map((c) => `${c.quantityText ?? c.quantity} ${c.unit === 'piece' ? '' : `${c.unit} `}${c.name.toLowerCase()}`).join(', ')}</p>
-          {addon?.meal.portionText && <p className="ui-muted">Add-on: {addon.meal.portionText}</p>}
+          
         </div>
       )}
       {meal.mainIngredients?.length > 0 && <div className="chips-wrap">{meal.mainIngredients.map((m) => <span key={m} className="ing">{m}</span>)}</div>}
@@ -188,7 +210,7 @@ export default function MealSheet({ meal, stepLabel, picked, currentAddon, addon
           <p className="ui-muted">Amounts are estimates, adjusted for your age, goal, height and weight.</p>
         </Fold>
       )}
-      {rec && !addon && rec.percentOfDaily && (
+      {rec && !have && rec.percentOfDaily && (
         <Fold title="What this adds to your day">
           <p>Covers {rec.percentOfDaily.calories}% of your daily calories and {rec.percentOfDaily.protein}% of your protein. Left for the day after this meal: {rec.remainingAfter.calories} kcal, {rec.remainingAfter.protein} g protein.</p>
         </Fold>
@@ -196,7 +218,7 @@ export default function MealSheet({ meal, stepLabel, picked, currentAddon, addon
       {rec?.why?.length > 0 && <Fold title="Know why this recommendation"><ul className="why-list">{rec.why.map((w, i) => <li key={i} className={`why-${w.tone}`}>{w.text}</li>)}</ul></Fold>}
       {rec?.details && <Fold title="How this was scored"><ScoreDetails d={rec.details} /></Fold>}
       {detailed && (
-        <Fold title={`All nutrients${addon ? ' (meal and add-on together)' : meal.portion ? ' (for your portion)' : ''}`}>
+        <Fold title={`All nutrients${have ? ' (meal and add-ons together)' : meal.portion ? ' (for your portion)' : ''}`}>
           {Object.entries(NUTRIENT_GROUPS).map(([group, list]) => (
             <div key={group} className="nut-group">
               <strong>{NUTRIENT_GROUP_TITLES[group]}</strong>

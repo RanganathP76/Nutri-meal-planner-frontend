@@ -1,8 +1,10 @@
+import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { ChevronRight, Copy, CreditCard, FileText, HeartPulse, LifeBuoy, LogOut, RotateCcw, ShieldCheck, SlidersHorizontal, Smartphone, Wallet as WalletIcon, Gift } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { PLAN_NAMES } from '../utils/plans';
 import { Card, Chip, Button, Header, useFeedback } from '../ui/Kit';
+import MobileForm from '../components/MobileForm';
 import './Account.css';
 
 const LEGAL = [
@@ -31,6 +33,7 @@ export default function Account() {
   const { user, logout } = useAuth();
   const { confirm, notify } = useFeedback();
   const navigate = useNavigate();
+  const [editMobile, setEditMobile] = useState(false);
   const plan = user.activePlan;
   const active = Boolean(plan?.isActive);
   const setupPath = active && plan.planType === 'gym' ? '/gym/setup' : active && plan.planType === 'individual' ? '/individual/setup' : null;
@@ -56,6 +59,13 @@ export default function Account() {
           <p className="ui-muted">{user.email}</p>
           <p className="ui-muted">Member since {date(user.createdAt)}</p>
         </div>
+      </Card>
+
+      <Card className="stack">
+        <div className="acc-head"><h3>Mobile number</h3>{!editMobile && <Button variant="soft" small onClick={() => setEditMobile(true)}>Change</Button>}</div>
+        {editMobile
+          ? <MobileForm initial={user.mobile || ''} submitLabel="Save number" onSaved={() => { setEditMobile(false); notify('Mobile number saved'); }} autoFocus />
+          : <p>+91 {user.mobile ? `${user.mobile.slice(0, 5)} ${user.mobile.slice(5)}` : '-'}</p>}
       </Card>
 
       <Card hero={active} className="acc-plan">

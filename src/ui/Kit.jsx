@@ -40,19 +40,40 @@ export function Progress({ value = 0, tone = '' }) {
 }
 
 // Circular progress. Display only.
-export function Ring({ value = 0, size = 120, stroke = 12, label, sub, color = 'var(--primary)', track = 'var(--primary-soft)', labelSize }) {
+export function Ring({ value = 0, size = 120, stroke = 12, label, sub, color, track, labelSize, gradient = true }) {
   const r = (size - stroke) / 2;
   const c = 2 * Math.PI * r;
   const pct = Math.max(0, Math.min(100, Number.isFinite(value) ? value : 0));
+  const id = useRef(`rg${Math.random().toString(36).slice(2, 8)}`).current;
   return (
     <div className="ui-ring" style={{ width: size, height: size }}>
       <svg width={size} height={size} aria-hidden="true">
-        <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke={track} strokeWidth={stroke} />
-        <circle className="val" cx={size / 2} cy={size / 2} r={r} fill="none" stroke={color} strokeWidth={stroke} strokeLinecap="round" strokeDasharray={`${(c * pct) / 100} ${c}`} />
+        {gradient && !color && <defs><linearGradient id={id} x1="0" y1="0" x2="1" y2="1"><stop offset="0" stopColor="var(--ring-a, #19c37d)" /><stop offset="1" stopColor="var(--ring-b, #1fb5c9)" /></linearGradient></defs>}
+        <circle className="track" cx={size / 2} cy={size / 2} r={r} fill="none" stroke={track || 'var(--ring-track, rgba(15, 80, 60, .1))'} strokeWidth={stroke} />
+        <circle className="val" cx={size / 2} cy={size / 2} r={r} fill="none" stroke={color || (gradient ? `url(#${id})` : 'var(--primary)')} strokeWidth={stroke} strokeLinecap="round" strokeDasharray={`${(c * pct) / 100} ${c}`} />
       </svg>
       {(label != null || sub) && <div className="ui-ring-label">{label != null && <strong style={labelSize ? { fontSize: labelSize } : undefined}>{label}</strong>}{sub && <span>{sub}</span>}</div>}
     </div>
   );
+}
+
+// A few round photos that overlap. Shows up to `max`, then "+N". items: [{ name, imageUrl }]
+export function PhotoStack({ items, size = 28, max = 3 }) {
+  const list = items.filter(Boolean);
+  if (!list.length) return null;
+  const shown = list.slice(0, max);
+  const rest = list.length - shown.length;
+  return (
+    <span className="ui-pstack" style={{ '--ps': `${size}px` }} aria-label={list.map((x) => x.name).join(', ')}>
+      {shown.map((it, i) => <Photo key={`${it.name}-${i}`} src={it.imageUrl} alt="" className="ui-pstack-img" iconSize={Math.round(size / 2.2)} />)}
+      {rest > 0 && <span className="ui-pstack-more">+{rest}</span>}
+    </span>
+  );
+}
+
+// "Good", "Fair"... in a coloured pill, with the percent small beside it. b comes from utils/balance.js
+export function Quality({ b, showPercent = true }) {
+  return <span className={`ui-quality ${b.tone}`}><b>{b.label}</b>{showPercent && b.percent > 0 && <small>{b.percent}%</small>}</span>;
 }
 
 // Tabs that look like a segmented control. options: [[key, label], ...]

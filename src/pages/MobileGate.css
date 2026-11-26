@@ -1,0 +1,8 @@
+.gate { min-height: 100vh; min-height: 100dvh; display: grid; place-items: center; padding: 20px 16px; }
+.gate-card { width: 100%; max-width: 420px; padding: 22px !important; gap: 12px !important; }
+.gate-ico { width: 54px; height: 54px; border-radius: 18px; background: var(--grad); color: #fff; display: grid; place-items: center; box-shadow: 0 14px 28px -12px rgba(18, 163, 127, .8); }
+.gate h1 { font-size: 26px; }
+.gate-out { background: none; border: 0; color: var(--muted); font-size: 13px; text-decoration: underline; padding: 6px; }
+.mob-input { display: flex; align-items: stretch; gap: 8px; }
+.mob-prefix { display: inline-flex; align-items: center; gap: 6px; padding: 0 12px; border-radius: var(--radius-sm); background: rgba(15, 80, 60, .07); font-weight: 700; color: var(--primary-deep); flex: none; }
+.mob-input input { flex: 1; min-width: 0; font-size: 17px; letter-spacing: .04em; }

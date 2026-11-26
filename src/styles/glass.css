@@ -1,0 +1,71 @@
+/* FitRatio "glass" theme: light, frosted cards, aurora gradients, compact sizes. Loaded last so it wins. */
+:root {
+  --bg: #eef6f2; --cream: #e6f1ec; --surface: rgba(255, 255, 255, .78);
+  --ink: #0f2a24; --text: #0f2a24; --muted: #5a7068; --border: rgba(15, 80, 60, .1); --line: rgba(15, 80, 60, .1);
+  --primary: #12a37f; --primary-deep: #0b6f58; --primary-dark: #0b2b26; --primary-soft: rgba(18, 163, 127, .12); --primary-mist: rgba(18, 163, 127, .07);
+  --accent: #c5f25c; --accent-soft: rgba(197, 242, 92, .28); --lilac: #8b7cf6; --lilac-soft: rgba(139, 124, 246, .14); --sky: #25a8d6; --sky-soft: rgba(37, 168, 214, .14);
+  --warn-soft: rgba(245, 180, 60, .2); --warn-ink: #7a4d00; --danger: #d6453a; --danger-soft: rgba(214, 69, 58, .12);
+  --grad: linear-gradient(135deg, #19c37d 0%, #1fb5c9 100%);
+  --aurora: radial-gradient(120% 90% at 0% 0%, rgba(25, 195, 125, .55) 0, transparent 55%), radial-gradient(90% 90% at 100% 20%, rgba(31, 181, 201, .45) 0, transparent 55%), linear-gradient(160deg, #0b2b26 0%, #0e3a38 100%);
+  --radius: 20px; --radius-sm: 14px; --radius-xs: 10px;
+  --shadow-sm: 0 1px 2px rgba(10, 60, 45, .05), 0 8px 20px -12px rgba(10, 60, 45, .22);
+  --shadow: 0 2px 6px rgba(10, 60, 45, .05), 0 20px 40px -20px rgba(10, 60, 45, .3);
+  --ring-a: #19c37d; --ring-b: #1fb5c9; --ring-track: rgba(15, 80, 60, .1);
+  --nav-h: 58px;
+}
+body {
+  font-size: 14.5px; line-height: 1.45; min-height: 100vh;
+  background: radial-gradient(60% 40% at 0% 0%, rgba(120, 230, 180, .55) 0, transparent 60%), radial-gradient(50% 40% at 100% 8%, rgba(120, 200, 240, .45) 0, transparent 60%), radial-gradient(60% 50% at 50% 100%, rgba(197, 242, 92, .25) 0, transparent 60%), var(--bg);
+  background-attachment: fixed;
+}
+.shell-main { padding-top: calc(var(--safe-top) + 12px); }
+.ui-card { background: var(--surface); border: 1px solid rgba(255, 255, 255, .85); backdrop-filter: blur(14px) saturate(1.3); -webkit-backdrop-filter: blur(14px) saturate(1.3); padding: 14px; gap: 10px; box-shadow: var(--shadow-sm); }
+.ui-card.hero { background: var(--aurora); border: 1px solid rgba(255, 255, 255, .12); color: #fff; box-shadow: var(--shadow), inset 0 1px 0 rgba(255, 255, 255, .14); }
+.ui-card.cream { background: rgba(255, 255, 255, .5); border: 1px solid rgba(255, 255, 255, .7); }
+.ui-title { font-size: 24px; }
+.ui-btn { min-height: 44px; font-size: 14px; border-radius: 14px; }
+.ui-btn.primary { background: var(--grad); box-shadow: 0 10px 22px -10px rgba(18, 163, 127, .8); }
+.ui-btn.primary:hover { background: var(--grad); filter: brightness(.96); }
+.ui-btn.accent { background: var(--accent); color: #12300a; box-shadow: 0 10px 22px -12px rgba(150, 200, 30, .9); }
+.ui-btn.ghost { background: rgba(255, 255, 255, .7); border-color: rgba(15, 80, 60, .14); }
+.ui-btn.small { min-height: 38px; font-size: 13px; }
+.ui-icon-btn { width: 42px; height: 42px; border-radius: 14px; background: rgba(255, 255, 255, .75); border-color: rgba(15, 80, 60, .12); backdrop-filter: blur(10px); }
+input, select, textarea { min-height: 46px; background: rgba(255, 255, 255, .85); border-color: rgba(15, 80, 60, .16); }
+.ui-seg { background: rgba(15, 80, 60, .07); }
+.ui-seg button { min-height: 38px; font-size: 13px; }
+.ui-seg button[aria-selected='true'] { background: #fff; }
+.ui-chips button, .ui-pills button, .pill { background: rgba(255, 255, 255, .75); border-color: rgba(15, 80, 60, .14); min-height: 38px; font-size: 13px; }
+.ui-chips button[aria-pressed='true'] { background: var(--primary-dark); border-color: var(--primary-dark); }
+.ui-sheet { background: #f3faf6; }
+.ui-skel { background: linear-gradient(90deg, rgba(15, 80, 60, .06) 25%, rgba(255, 255, 255, .7) 50%, rgba(15, 80, 60, .06) 75%); background-size: 200% 100%; }
+.ui-ring circle.val { filter: drop-shadow(0 0 6px rgba(25, 195, 125, .45)); }
+.ui-ring-label strong { font-size: 20px; }
+
+/* Frosted floating nav */
+.bottom-nav { background: rgba(255, 255, 255, .72); backdrop-filter: blur(18px) saturate(1.4); -webkit-backdrop-filter: blur(18px) saturate(1.4); border: 1px solid rgba(255, 255, 255, .9); box-shadow: 0 18px 40px -16px rgba(10, 60, 45, .45); }
+.bottom-nav .nav-link.active { background: var(--grad); color: #fff; box-shadow: 0 8px 18px -8px rgba(18, 163, 127, .9); }
+.rail { background: rgba(255, 255, 255, .55); backdrop-filter: blur(16px); }
+.rail .nav-link.active { background: var(--grad); }
+.brand-mark { background: var(--grad); }
+
+/* Plain-word balance pills */
+.ui-quality { display: inline-flex; align-items: baseline; gap: 6px; padding: 3px 10px; border-radius: 999px; font-size: 12px; background: rgba(15, 80, 60, .08); color: var(--muted); white-space: nowrap; }
+.ui-quality b { font-weight: 800; }
+.ui-quality small { font-size: 10.5px; opacity: .75; }
+.ui-quality.great { background: rgba(25, 195, 125, .18); color: #0a6a49; }
+.ui-quality.good { background: rgba(197, 242, 92, .4); color: #3d5a00; }
+.ui-quality.fair { background: rgba(245, 180, 60, .24); color: #7a4d00; }
+.ui-quality.low { background: rgba(214, 69, 58, .14); color: #a02c22; }
+.ui-quality.high { background: rgba(139, 124, 246, .18); color: #4d3fa8; }
+.hero .ui-quality { background: rgba(255, 255, 255, .14); color: #e8fff4; }
+.hero .ui-quality.great { background: rgba(25, 195, 125, .35); color: #c8ffe6; }
+.hero .ui-quality.good { background: rgba(197, 242, 92, .3); color: #ecffb8; }
+.hero .ui-quality.fair { background: rgba(245, 180, 60, .3); color: #ffe7b0; }
+.hero .ui-quality.low { background: rgba(255, 120, 110, .3); color: #ffd3cf; }
+.hero .ui-quality.high { background: rgba(160, 150, 255, .3); color: #ddd8ff; }
+
+/* Overlapping round photos (meal + add-ons) */
+.ui-pstack { display: inline-flex; align-items: center; }
+.ui-pstack .ui-pstack-img { width: var(--ps); height: var(--ps); border-radius: 50%; border: 2px solid #fff; margin-left: calc(var(--ps) * -0.32); flex: none; box-shadow: 0 2px 6px rgba(10, 60, 45, .25); }
+.ui-pstack .ui-pstack-img:first-child { margin-left: 0; }
+.ui-pstack-more { margin-left: calc(var(--ps) * -0.32); min-width: var(--ps); height: var(--ps); padding: 0 5px; border-radius: 999px; border: 2px solid #fff; background: var(--primary-dark); color: #fff; font-size: calc(var(--ps) * .42); font-weight: 800; display: inline-grid; place-items: center; }

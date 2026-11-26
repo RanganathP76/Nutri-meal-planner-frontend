@@ -2,7 +2,8 @@ import { useEffect, useState } from 'react';
 import { Droplets } from 'lucide-react';
 import api, { errorMessage } from '../api/client';
 import { ALLERGENS } from '../utils/allergens';
-import { Button, Chip, Photo, Progress, Ring, Segmented, Sheet } from '../ui/Kit';
+import { Button, Chip, Photo, Progress, Quality, Ring, Segmented, Sheet } from '../ui/Kit';
+import { balanceOf } from '../utils/balance';
 import { targetLabel } from './adapters';
 
 const ROWS = [['calories', 'Calories', 'kcal', ''], ['protein', 'Protein', 'g', 'lilac'], ['carbohydrates', 'Carbs', 'g', 'accent'], ['fat', 'Fat', 'g', 'sky'], ['fiber', 'Fibre', 'g', '']];
@@ -11,25 +12,31 @@ const ROWS = [['calories', 'Calories', 'kcal', ''], ['protein', 'Protein', 'g', 
 export function BalanceSheet({ open, onClose, targets, eaten, waterLitres, children }) {
   if (!targets || !eaten) return <Sheet open={open} onClose={onClose} title="Today's balance"><p className="ui-muted">Pick a meal and your balance will show here.</p></Sheet>;
   const pct = targets.calories ? (eaten.calories / targets.calories) * 100 : 0;
+  const total = balanceOf(eaten.calories, targets.calories);
   const left = (k) => Math.max(0, Math.round(targets[k] - eaten[k]));
   return (
     <Sheet open={open} onClose={onClose} title="Today's balance">
       <div className="bal-top">
-        <Ring value={pct} size={140} stroke={14} label={left('calories')} sub="kcal left" />
+        <Ring value={Math.min(100, pct)} size={108} stroke={11} label={total.tone === 'none' ? '–' : total.label} sub="today" labelSize={total.label.length > 6 ? 14 : 18} />
         <div>
           <p className="ui-muted">Chosen so far</p>
           <h3>{Math.round(eaten.calories)} <small>of {Math.round(targets.calories)} kcal</small></h3>
-          <p className="ui-muted">Still to eat: {left('protein')} g protein</p>
+          <Quality b={total} />
         </div>
       </div>
+      <p className="ui-muted">Nobody eats exactly 100% every day. Good and Great both mean you are on track.</p>
       <div className="stack">
-        {ROWS.slice(1).map(([k, label, unit, tone]) => (
-          <div key={k}>
-            <div className="bal-row"><span>{label}</span><span className="ui-muted">{Math.round(eaten[k])} / {Math.round(targets[k])} {unit}</span></div>
-            <Progress value={targets[k] ? (eaten[k] / targets[k]) * 100 : 0} tone={tone} />
-          </div>
-        ))}
+        {ROWS.slice(1).map(([k, label, unit, tone]) => {
+          const b = balanceOf(eaten[k], targets[k]);
+          return (
+            <div key={k}>
+              <div className="bal-row"><span>{label} <Quality b={b} /></span><span className="ui-muted">{Math.round(eaten[k])} / {Math.round(targets[k])} {unit}</span></div>
+              <Progress value={b.percent} tone={tone} />
+            </div>
+          );
+        })}
       </div>
+      <p className="ui-muted">Still to eat: about {left('protein')} g protein, {left('fiber')} g fibre.</p>
       {waterLitres ? <div className="water-note"><Droplets size={18} aria-hidden="true" /> Drink about <strong>{waterLitres} litres</strong> of water today</div> : null}
       {children}
       <p className="ui-muted">Targets and totals are estimates to guide you, not medical advice.</p>
@@ -82,7 +89,7 @@ export function FullDaySheet({ open, onClose, url, params, appliedIds, onApply, 
           </div>
           {day.addon && (
             <div className="addon-box">
-              <strong>+ Add-on for this day: {day.addon.name}</strong>
+              <div className="fd-item"><Photo src={day.addon.imageUrl} alt={day.addon.name} className="fd-photo" iconSize={22} /><span><small>Add-on for this day</small><strong>{day.addon.name}</strong></span></div>
               <p className="ui-muted">{day.addon.addon.reason}</p>
               {day.addon.portionText && <p className="ui-muted">{day.addon.portionText}</p>}
               {onAddon && (addedIds.includes(day.addon._id)
